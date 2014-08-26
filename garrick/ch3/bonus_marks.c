@@ -26,13 +26,6 @@ void say_hello(int n) {
   }
 }
 
-int main(int argc, char** argv) {
-  //forloop_hello_world();
-  //whileloop_hello_world();
-  say_hello(10);
-  return 0;
-}
-
 /* Other types? 
   union
   arrays
@@ -80,3 +73,45 @@ int main(int argc, char** argv) {
         puts("Don't just do something, stand there!"); 
       } while(n > 0);
    }
+
+/*
+ Switch evaluates a conditional and executes the matched case statement.
+ Break exits the flow, in a switch without a break the next case block is executed.
+ Break on it's own exits a loop and terminates it's conditional evaluation.
+ Continue stops the evaluation of a loop at that point and evaluates the conditional again.
+ */
+  void switch_statement(char inchar) {
+    switch(inchar) {
+      case 'a': {
+          puts("A, buddy.");
+          break;
+        }
+      case 'b': {
+          puts("B, guy.");
+          break;
+        }
+      case 'c': {
+        puts("C, friend.");
+        break;
+      }
+      default: {
+        puts("'He's not your friend, buddy!' - some guy");
+      }
+    }
+  }
+
+/* Typedef allows you to create your own types, including using a struct. */
+
+typedef struct User {
+
+  char* username;
+  char* password;
+} USER;
+
+int main(int argc, char** argv) {
+  //forloop_hello_world();
+  //whileloop_hello_world();
+  say_hello(10);
+  switch_statement('z');
+  return 0;
+}
