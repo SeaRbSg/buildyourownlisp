@@ -1,7 +1,10 @@
 
 CFLAGS=-std=c99 -Wall -pedantic -g -O0 -ledit
 
-all: ch04 ch05
+all: \
+	ch04 \
+	ch05 \
+	$(NULL)
 
 ch04: ch04.c
 
