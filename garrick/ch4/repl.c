@@ -1,11 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-#define MAX_SIZE 2048  /* #define because 'magic numbers' suck */
-
-/* Declare a static buffer for user input MAX_SIZE  */
-
-static char input[MAX_SIZE];
+#include <editline/readline.h>
+#include <editline/history.h>
 
 int main(int argc, char** argv) {
 
@@ -15,12 +11,14 @@ int main(int argc, char** argv) {
 
   /* never ending storrr-y! */
   while(1) {
-      /* output our prompt */ 
-      fputs("lispy> ", stdout);
-      /* get actual input */
-      fgets(input, MAX_SIZE, stdin);
+      /* output our prompt and get input */ 
+      char* input = readline("lispy> ");
+      /* add to our history */
+      add_history(input);
       /* echo back to user */
-      printf("No you're a %s", input); 
+      printf("No you're a %s\n", input); 
+      /* free the malocs! */
+      free(input);
   }
 
   return 0;
