@@ -10,7 +10,11 @@ int main(int argc, char** argv) {
   while (1) {
     printf("lispy> ");
     fgets(input, BUFSIZE, stdin);
+
+    if (feof(stdin)) break;
+
     printf("No you're a %s\n", input);
+
   }
 
   return 0;
