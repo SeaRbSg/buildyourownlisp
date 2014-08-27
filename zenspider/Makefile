@@ -12,4 +12,4 @@ clean:
 	rm -rf *.dSYM *~
 
 realclean: clean
-	rm ch04
+	rm -f ch?? *.o
