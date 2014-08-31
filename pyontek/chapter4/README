@@ -1,0 +1,4 @@
+In compilation ensure program is linked to editline:
+
+cc -std=c99 -Wall prompt.c -ledit -o prompt
+
