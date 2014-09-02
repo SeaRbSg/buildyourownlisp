@@ -1,0 +1,37 @@
+* Write down some more examples of strings the Doge language contains.
+wow lisp such language
+many c many book many build
+such lisp so book
+
+* Why are there back slashes \ in front of the quote marks " in the grammar?
+To escape them inside the string
+
+* Why are there back slashes \ at the end of the line in the grammar?
+So that the string extends across carriage returns
+
+* Describe textually a grammar for decimal numbers such as 0.01 or 52.221.
+digit: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+decimal: <digit>+.<digit>+ | <digit>
+
+* Describe textually a grammar for web URLs such as http://www.buildyourownlisp.com.
+tld: com | co | uk | st
+section: [a-z]+
+url: http://(<section>.)+.<tld>
+
+* Describe textually a grammar for simple English sentences such as the cat sat on the mat.
+noun: cat | mat
+verb: sat
+article: the
+preposition: on
+prepositional-phrase: <preposition> <article> <noun>
+noun-phrase: <article> <noun>
+sentence: <noun-phrase> <verb> <prepositional-phrase>
+
+* If you are familiar with JSON, textually describe a grammar for it.        
+string: "\w*"
+number: [0-9]
+value: <string> | <number> | <array> | <object>
+key: <string>
+key-value-pair: <key>:<value> 
+array: [(<value>,)*value+] | [value] | []
+object: {} | {<object>} | {(<object>,)*,<object>} | {<key-value-pair>} | {(<key-value-pair>,)*,<key-value-pair>} 
