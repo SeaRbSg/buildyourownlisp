@@ -1,0 +1,18 @@
+My Attempt at Bonus Marks grammars (psuedocode-ish:
+
+Decimal numbers:
+number : [0-9]+
+decimal : <number> '.' <number>
+
+Web URLs:
+scheme : "http"
+hostname : [a-z0-9]+ '.'
+domain : [a-z0-9]+ '.' "com" | "org" | etc...
+host: <hostname>* <domain>
+url: <scheme>://<host>
+
+Simple English sentences:
+subject : "the" "cat" | "hat"
+verb : "sat"
+preposition : "on" <subject>
+setence : <subject> <verb> <preposition>*
