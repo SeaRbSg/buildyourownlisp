@@ -25,6 +25,20 @@ long eval(mpc_ast_t* t) {
   return x;
 }
 
+long count_leaves(mpc_ast_t* t) {
+  long max = t->children_num;
+
+  if (max == 0) {
+    return 1;
+  } else {
+    int total = 0;
+    for (int i = 0; i < max; i++) {
+      total += count_leaves(t->children[i]);
+    }
+    return total;
+  }
+}
+
 int main() {
   mpc_parser_t* Number   = mpc_new("number");
   mpc_parser_t* Operator = mpc_new("operator");
@@ -49,6 +63,8 @@ int main() {
 
       long result = eval(r.output);
       printf("= %li\n", result);
+      printf("# %li\n", count_leaves(r.output));
+
       mpc_ast_delete(r.output);
     } else {
       mpc_err_print(r.error);
