@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   mpca_lang(MPCA_LANG_DEFAULT, 
     "\
     number : /-?[0-9]+/ ; \
-    operator : '+' | '-' | '*' | '/' ; \
+    operator : '+' | '-' | '*' | '/' | '%' ; \
     expr : <number> | '(' <operator> <expr>+ ')' ; \
     lithp : /^/ <operator> <expr>+ /$/ ; \
     ",
@@ -52,4 +52,12 @@ int main(int argc, char** argv) {
   mpc_cleanup(4, Number, Operator, Expr, Lithp);
   return 0;
 }
+
+/* Bonus work 
+ 1: ^[ab]*$
+ 2: ^[[aa*][bb*]]*$
+ 3: 
+ 4: 
+
+*/
 
