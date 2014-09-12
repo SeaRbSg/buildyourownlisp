@@ -4,6 +4,7 @@
 
 long eval(mpc_ast_t* t);
 long eval_op(long x, char* op, long y);
+int num_leaves(mpc_ast_t* t);
 
 int main(int argc, char** argv) {
 
@@ -68,4 +69,20 @@ long eval_op(long x, char* op, long y) {
   if (strcmp(op, "*") == 0) { return x * y; }
   if (strcmp(op, "/") == 0) { return x / y; }
   return 0;
+}
+
+int num_leaves(mpc_ast_t* t) {
+  if (t->children_num < 1) {
+    // no children
+    return 1;
+  } else {
+    // iterate through children and return the sum
+    int sum = 0;
+
+    for (int i = 0; i < t->children_num; i++) {
+      sum += num_leaves(t->children[i]);
+    }
+
+    return sum;
+  }
 }
