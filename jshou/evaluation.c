@@ -6,6 +6,7 @@ long eval(mpc_ast_t* t);
 long eval_op(long x, char* op, long y);
 int num_leaves(mpc_ast_t* t);
 int num_branches(mpc_ast_t* t);
+int max_branches(mpc_ast_t* t);
 
 int main(int argc, char** argv) {
 
@@ -101,5 +102,22 @@ int num_branches(mpc_ast_t* t) {
     }
 
     return sum;
+  }
+}
+
+int max_branches(mpc_ast_t* t) {
+  if (t->children_num < 1) {
+    return 0;
+  } else {
+    int branches = t->children_num;
+
+    for (int i = 0; i < t->children_num; i++) {
+      int child_branches = max_branches(t->children[i]);
+      if (child_branches > branches) {
+        branches = child_branches;
+      }
+    }
+
+    return branches;
   }
 }
