@@ -1,12 +1,18 @@
 #include "mpc.h"
 #include <editline/readline.h>
 #include <string.h>
+#include <math.h>
 
 long eval_op(long x, char* op, long y) {
   if (strcmp(op, "+") == 0) { return x + y; }
   if (strcmp(op, "-") == 0) { return x - y; }
   if (strcmp(op, "*") == 0) { return x * y; }
   if (strcmp(op, "/") == 0) { return x / y; }
+  if (strcmp(op, "%") == 0) { return x % y; }
+  if (strcmp(op, "^") == 0) { return pow(x, y); }
+  if (strcmp(op, "min") == 0) { return x <= y ? x : y; }
+  if (strcmp(op, "max") == 0) { return x >= y ? x : y; }
+  fprintf(stderr, "WARNING: unknown operator '%s'\n", op);
   return 0;
 }
 
@@ -48,7 +54,7 @@ int main() {
 
   mpca_lang(MPCA_LANG_DEFAULT, "                                \
             number   : /-?[0-9]+(\\.[0-9]+)?/;                  \
-            operator : '+' | '-' | '*' | '/' | '%';             \
+            operator : '+' | '-' | '*' | '/' | '%' | '^' | /[a-zA-Z][a-zA-Z0-9-]*/; \
             expr     : <number> | '(' <operator> <expr>+ ')';   \
             lispy    : /^/ <operator> <expr>+ /$/;              ",
             Number, Operator, Expr, Lispy);
