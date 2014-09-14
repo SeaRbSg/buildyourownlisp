@@ -72,7 +72,7 @@ lval eval_op(lval x, char* op, lval y) {
   if (strcmp(op, "%") == 0)   { return b == 0 ? lval_err(LERR_DIV_ZERO) : lval_num(a % b); }
   if (strcmp(op, "^") == 0)   { return lval_num(pow(a, b));      }
   if (strcmp(op, "min") == 0) { return lval_num(a <= b ? a : b); }
-  if (strcmp(op, "maa") == 0) { return lval_num(a >= b ? a : b); }
+  if (strcmp(op, "max") == 0) { return lval_num(a >= b ? a : b); }
 
   fprintf(stderr, "WARNING: unknown operator '%s'\n", op);
   return lval_err(LERR_BAD_OP);
