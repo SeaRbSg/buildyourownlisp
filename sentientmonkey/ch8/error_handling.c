@@ -14,35 +14,40 @@
 typedef enum { LVAL_NUM, LVAL_ERR } lval_type_t;
 typedef enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM } lval_err_t;
 
+/* Using union for value.
+ * This allows us to save on storage space for our lval structures, at the cost of additional complexity in addressing them.
+ */
 typedef struct {
     lval_type_t type;
-    long num;
-    lval_err_t err;
+    union val {
+        long num;
+        lval_err_t err;
+    } val;
 } lval;
 
 lval lval_num(long x) {
     lval v;
     v.type = LVAL_NUM;
-    v.num = x;
+    v.val.num = x;
     return v;
 }
 
 lval lval_err(lval_err_t x) {
     lval v;
     v.type = LVAL_ERR;
-    v.err = x;
+    v.val.err = x;
     return v;
 }
 
 void lval_print(lval v) {
     switch (v.type) {
         case LVAL_NUM:
-            printf("%li", v.num);
+            printf("%li", v.val.num);
             break;
         case LVAL_ERR:
-            if (v.err == LERR_DIV_ZERO) { printf("Error: Division By Zero!"); }
-            if (v.err == LERR_BAD_OP)   { printf("Error: Invalid Operator!"); }
-            if (v.err == LERR_BAD_NUM)  { printf("Error: Invalid Number!"); }
+            if (v.val.err == LERR_DIV_ZERO) { printf("Error: Division By Zero!"); }
+            if (v.val.err == LERR_BAD_OP)   { printf("Error: Invalid Operator!"); }
+            if (v.val.err == LERR_BAD_NUM)  { printf("Error: Invalid Number!"); }
             break;
         default:
             printf("Error: Unknown Operator!");
@@ -58,24 +63,24 @@ lval eval_op(lval x, char* op, lval y) {
     if (x.type == LVAL_ERR) { return x; }
     if (y.type == LVAL_ERR) { return y; }
 
-    if ((STR_EQ("/", op) || STR_EQ("%", op)) && (y.num == 0)) {
+    if ((STR_EQ("/", op) || STR_EQ("%", op)) && (y.val.num == 0)) {
         return lval_err(LERR_DIV_ZERO);
     }
 
-    if STR_EQ("+", op)   { return lval_num(x.num + y.num); }
-    if STR_EQ("-", op)   { return lval_num(x.num - y.num); }
-    if STR_EQ("*", op)   { return lval_num(x.num * y.num); }
-    if STR_EQ("/", op)   { return lval_num(x.num / y.num); }
-    if STR_EQ("%", op)   { return lval_num(x.num % y.num); }
-    if STR_EQ("^", op)   { return lval_num(pow(x.num, y.num)); }
-    if STR_EQ("min", op) { return lval_num(MIN(x.num, y.num)); }
-    if STR_EQ("max", op) { return lval_num(MAX(x.num, y.num)); }
+    if STR_EQ("+", op)   { return lval_num(x.val.num + y.val.num); }
+    if STR_EQ("-", op)   { return lval_num(x.val.num - y.val.num); }
+    if STR_EQ("*", op)   { return lval_num(x.val.num * y.val.num); }
+    if STR_EQ("/", op)   { return lval_num(x.val.num / y.val.num); }
+    if STR_EQ("%", op)   { return lval_num(x.val.num % y.val.num); }
+    if STR_EQ("^", op)   { return lval_num(pow(x.val.num, y.val.num)); }
+    if STR_EQ("min", op) { return lval_num(MIN(x.val.num, y.val.num)); }
+    if STR_EQ("max", op) { return lval_num(MAX(x.val.num, y.val.num)); }
 
     return lval_err(LERR_BAD_OP);
 }
 
 lval eval_unary(lval x, char* op) {
-    if STR_EQ("-", op) { return lval_num(x.num * -1); }
+    if STR_EQ("-", op) { return lval_num(x.val.num * -1); }
 
     return lval_err(LERR_BAD_OP);
 }
