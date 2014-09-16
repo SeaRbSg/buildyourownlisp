@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <editline/readline.h>
 #include "mpc.h"
@@ -10,6 +11,16 @@ long eval_op(long x, char* op, long y) {
     if (strcmp(op, "-") == 0) { return x - y; }
     if (strcmp(op, "*") == 0) { return x * y; }
     if (strcmp(op, "/") == 0) { return x / y; }
+    if (strcmp(op, "%") == 0) { return x % y; }
+    if (strcmp(op, "^") == 0) { return pow(x,y); }
+    if (strcmp(op, "min") == 0) { return (x < y) ? x : y; }
+    if (strcmp(op, "max") == 0) { return (x > y) ? x : y; }
+
+    return 0;
+}
+
+long eval_unary(long x, char* op) {
+    if (strcmp(op, "-") == 0) { return x * -1; }
 
     return 0;
 }
@@ -21,7 +32,7 @@ long eval(mpc_ast_t* t) {
 
     long x = eval(t->children[2]);
 
-    int i = 3;
+    int i=3;
     while (strstr(t->children[i]->tag, "expr")) {
         x = eval_op(x, op, eval(t->children[i]));
         i++;
@@ -40,11 +51,11 @@ int main(int argc, char** argv) {
     mpc_parser_t* Lispy    = mpc_new("lispy");
 
     mpca_lang(MPCA_LANG_DEFAULT,
-            "                                                                       \
-            number   : /-?[0-9]+(\\.[0-9]+)?/ ;                                     \
-            operator : '+' | '-' | '*' | '/' | '%' | \"add\" | \"mul\" | \"div\" ;  \
-            expr     : <number> | '(' <operator> <expr>+ ')' ;                      \
-            lispy    : /^/ <operator> <expr>+ /$/ ;                                 \
+            "                                                                  \
+            number   : /-?[0-9]+/ ;                                            \
+            operator : '+' | '-' | '*' | '/' | '%' | '^' |  \"min\" | \"max\"; \
+            expr     : <number> | '(' <operator> <expr>+ ')' ;                 \
+            lispy    : /^/ <operator> <expr>+ /$/ ;                            \
             ",
             Number, Operator, Expr, Lispy);
 
