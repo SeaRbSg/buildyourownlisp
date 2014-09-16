@@ -15,7 +15,8 @@ typedef enum { LVAL_NUM, LVAL_DUB, LVAL_ERR } lval_type_t;
 typedef enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM, LERR_COERCE } lval_err_t;
 
 /* Using union for value.
- * This allows us to save on storage space for our lval structures, at the cost of additional complexity in addressing them.
+ * This allows us to save on storage space for our lval structures,
+ * at the cost of additional complexity in addressing them.
  */
 typedef struct {
     lval_type_t type;
@@ -71,46 +72,65 @@ void lval_println(lval v) {
     putchar('\n');
 }
 
+lval eval_num(lval x, char* op, lval y) {
+    if ((STR_EQ("/", op) || STR_EQ("%", op)) && (y.val.num == 0)) {
+        return lval_err(LERR_DIV_ZERO);
+    }
+
+    if STR_EQ("+", op)   { return lval_num(x.val.num + y.val.num); }
+    if STR_EQ("-", op)   { return lval_num(x.val.num - y.val.num); }
+    if STR_EQ("*", op)   { return lval_num(x.val.num * y.val.num); }
+    if STR_EQ("/", op)   { return lval_num(x.val.num / y.val.num); }
+    if STR_EQ("%", op)   { return lval_num(x.val.num % y.val.num); }
+    if STR_EQ("^", op)   { return lval_num(pow(x.val.num, y.val.num)); }
+    if STR_EQ("min", op) { return lval_num(MIN(x.val.num, y.val.num)); }
+    if STR_EQ("max", op) { return lval_num(MAX(x.val.num, y.val.num)); }
+
+    return lval_err(LERR_BAD_OP);
+}
+
+lval eval_dub(lval x, char* op, lval y) {
+    if ((STR_EQ("/", op) || STR_EQ("%", op)) && (y.val.dub == 0)) {
+        return lval_err(LERR_DIV_ZERO);
+    }
+
+    if STR_EQ("+", op)   { return lval_dub(x.val.dub + y.val.dub); }
+    if STR_EQ("-", op)   { return lval_dub(x.val.dub - y.val.dub); }
+    if STR_EQ("*", op)   { return lval_dub(x.val.dub * y.val.dub); }
+    if STR_EQ("/", op)   { return lval_dub(x.val.dub / y.val.dub); }
+    if STR_EQ("%", op)   { return lval_dub(fmod(x.val.dub, y.val.dub)); }
+    if STR_EQ("^", op)   { return lval_dub(pow(x.val.dub, y.val.dub)); }
+    if STR_EQ("min", op) { return lval_dub(MIN(x.val.dub, y.val.dub)); }
+    if STR_EQ("max", op) { return lval_dub(MAX(x.val.dub, y.val.dub)); }
+
+    return lval_err(LERR_BAD_OP);
+}
+
 lval eval_op(lval x, char* op, lval y) {
     if (x.type == LVAL_ERR) { return x; }
     if (y.type == LVAL_ERR) { return y; }
 
+    /* coerce fixed to floating point */
+    if ((x.type == LVAL_DUB) && (y.type == LVAL_NUM)) {
+        y = lval_dub(y.val.num);
+    }
+    if ((x.type == LVAL_NUM) && (y.type == LVAL_DUB)) {
+        x = lval_dub(x.val.num);
+    }
+
+    /* should not longer happen, but just in case... */
     if (x.type != y.type) { return lval_err(LERR_COERCE); }
 
     if ((x.type == LVAL_NUM) && (y.type == LVAL_NUM)) {
-        if ((STR_EQ("/", op) || STR_EQ("%", op)) && (y.val.num == 0)) {
-            return lval_err(LERR_DIV_ZERO);
-        }
-
-        if STR_EQ("+", op)   { return lval_num(x.val.num + y.val.num); }
-        if STR_EQ("-", op)   { return lval_num(x.val.num - y.val.num); }
-        if STR_EQ("*", op)   { return lval_num(x.val.num * y.val.num); }
-        if STR_EQ("/", op)   { return lval_num(x.val.num / y.val.num); }
-        if STR_EQ("%", op)   { return lval_num(x.val.num % y.val.num); }
-        if STR_EQ("^", op)   { return lval_num(pow(x.val.num, y.val.num)); }
-        if STR_EQ("min", op) { return lval_num(MIN(x.val.num, y.val.num)); }
-        if STR_EQ("max", op) { return lval_num(MAX(x.val.num, y.val.num)); }
-
+        return eval_num(x, op, y);
     } else if ((x.type == LVAL_DUB) && (y.type == LVAL_DUB)) {
-        if ((STR_EQ("/", op) || STR_EQ("%", op)) && (y.val.dub == 0)) {
-            return lval_err(LERR_DIV_ZERO);
-        }
-
-        if STR_EQ("+", op)   { return lval_dub(x.val.dub + y.val.dub); }
-        if STR_EQ("-", op)   { return lval_dub(x.val.dub - y.val.dub); }
-        if STR_EQ("*", op)   { return lval_dub(x.val.dub * y.val.dub); }
-        if STR_EQ("/", op)   { return lval_dub(x.val.dub / y.val.dub); }
-        if STR_EQ("%", op)   { return lval_dub(fmod(x.val.dub, y.val.dub)); }
-        if STR_EQ("^", op)   { return lval_dub(pow(x.val.dub, y.val.dub)); }
-        if STR_EQ("min", op) { return lval_dub(MIN(x.val.dub, y.val.dub)); }
-        if STR_EQ("max", op) { return lval_dub(MAX(x.val.dub, y.val.dub)); }
+        return eval_dub(x, op, y);
     }
 
     return lval_err(LERR_BAD_OP);
 }
 
 lval eval_unary(lval x, char* op) {
-
     if (x.type == LVAL_NUM) {
         if (STR_EQ("-", op)) { return lval_num(x.val.num * -1); }
     } else if (x.type == LVAL_DUB) {
