@@ -74,13 +74,11 @@ lval eval_op(lval x, char* op, lval y) {
     return lval_err(LERR_BAD_OP);
 }
 
-/*
-long eval_unary(long x, char* op) {
-    if (strcmp(op, "-") == 0) { return x * -1; }
+lval eval_unary(lval x, char* op) {
+    if STR_EQ("-", op) { return lval_num(x.num * -1); }
 
-    return 0;
+    return lval_err(LERR_BAD_OP);
 }
-*/
 
 lval eval(mpc_ast_t* t) {
     if (strstr(t->tag, "number")) {
@@ -95,7 +93,7 @@ lval eval(mpc_ast_t* t) {
     int i=3;
 
     if (t->children_num == i+1) {
-        // x = eval_unary(x, op);
+        x = eval_unary(x, op);
     } else {
         while (strstr(t->children[i]->tag, "expr")) {
             x = eval_op(x, op, eval(t->children[i]));
