@@ -15,8 +15,20 @@ typedef struct lval {
 
 enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR }; // lval_types
 
-lval* lval_num(long x) {
+lval* lval_abstract() {
   lval* lv = malloc(sizeof(lval));
+  lv->type = -1;
+  lv->num = 0;
+  lv->err = NULL;
+  lv->sym = NULL;
+
+  lv->count = 0;
+  lv->cell = NULL;
+  return lv;
+}
+
+lval* lval_num(long x) {
+  lval* lv = lval_abstract();
   lv->type = LVAL_NUM;
   lv->num = x;
 
@@ -24,7 +36,7 @@ lval* lval_num(long x) {
 }
 
 lval* lval_err(char* m) {
-  lval* lv = malloc(sizeof(lval));
+  lval* lv = lval_abstract();
   lv->type = LVAL_ERR;
   lv->err = malloc(strlen(m) + 1);
   strcpy(lv->err, m);
@@ -33,7 +45,7 @@ lval* lval_err(char* m) {
 }
 
 lval* lval_sym(char* s) {
-  lval* v = malloc(sizeof(lval));
+  lval* v = lval_abstract();
   v->type = LVAL_SYM;
   v->sym = malloc(strlen(s) + 1);
   strcpy(v->sym, s);
@@ -42,10 +54,8 @@ lval* lval_sym(char* s) {
 }
 
 lval* lval_sexpr(void) {
-  lval* v = malloc(sizeof(lval));
+  lval* v = lval_abstract();
   v->type = LVAL_SEXPR;
-  v->count = 0;
-  v->cell = NULL;
   return v;
 }
 
