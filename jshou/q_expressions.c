@@ -263,7 +263,7 @@ lval* lval_eval_sexpr(lval* v) {
     return lval_err("S-expression does not start with symbol");
   }
 
-  // call builtin with op
+  // call builtin
   lval* result = builtin(v, f->sym);
   lval_del(f);
   return result;
@@ -294,9 +294,12 @@ lval* builtin(lval* a, char* func) {
 }
 
 lval* builtin_head(lval* a) {
-  LASSERT(a, a->count != 1, "Function 'head' takes one and only one qexpr as an argument");
-  LASSERT(a, a->cell[0]->type != LVAL_QEXPR, "Function 'head' takes one and only one qexpr as an argument");
-  LASSERT(a, a->cell[0]->count == 0, "Function 'head' passed {}");
+  if (a->count != 1) {
+    return a;
+  }
+  LASSERT(a, a->count == 1, "Function 'head' passed too many arguments");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR, "Function 'head' passed wrong type");
+  LASSERT(a, a->cell[0]->count != 0, "Function 'head' passed {}");
 
   lval* v = lval_take(a, 0);
   while(v->count > 1) {
@@ -307,9 +310,9 @@ lval* builtin_head(lval* a) {
 }
 
 lval* builtin_tail(lval* a) {
-  LASSERT(a, a->count != 1, "Function 'tail' takes one and only one qexpr as an argument");
-  LASSERT(a, a->cell[0]->type != LVAL_QEXPR, "Function 'tail' takes one and only one qexpr as an argument");
-  LASSERT(a, a->cell[0]->count == 0, "Function 'tail' passed {}");
+  LASSERT(a, a->count == 1, "Function 'tail' passed too many args");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR, "Function 'tail' passed wrong type");
+  LASSERT(a, a->cell[0]->count != 0, "Function 'tail' passed {}");
 
   lval* v = lval_take(a, 0);
   lval_del(lval_pop(v, 0));
