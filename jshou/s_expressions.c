@@ -97,7 +97,7 @@ lval* lval_read(mpc_ast_t* t) {
   if (strstr(t->tag, "number")) {
     return lval_read_num(t);
   }
-  if (strstr(t->tag, "sexpr")) {
+  if (strstr(t->tag, "symbol")) {
     return lval_sym(t->contents);
   }
 
