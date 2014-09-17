@@ -15,6 +15,35 @@ typedef struct lval {
 
 enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR }; // lval_types
 
+lval* lval_abstract();
+lval* lval_num(long x);
+lval* lval_err(char* m);
+lval* lval_sym(char* x);
+lval* lval_sexpr(void);
+lval* lval_qepxr(void);
+void lval_del(lval* v);
+lval* lval_add(lval* v, lval* x);
+lval* lval_read_num(mpc_ast_t* t);
+lval* lval_read(mpc_ast_t* t);
+void lval_expr_print(lval* v, char open, char close);
+void lval_print(lval* v);
+void lval_println(lval* v);
+lval* lval_pop(lval* v, int i);
+lval* lval_take(lval* v, int i);
+lval* builtin_op(lval* a, char* op);
+lval* lval_eval(lval* v);
+lval* lval_eval_sexpr(lval* y);
+lval* builtin(lval* a, char* func);
+lval* builtin_head(lval* a);
+lval* builtin_tail(lval* a);
+lval* builtin_list(lval* a);
+lval* builtin_eval(lval* a);
+lval* builtin_join(lval* a);
+lval* lval_join(lval* x, lval* y);
+
+#define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
+
+
 lval* lval_abstract() {
   lval* lv = malloc(sizeof(lval));
   lv->type = -1;
@@ -126,7 +155,6 @@ lval* lval_read(mpc_ast_t* t) {
   return x;
 }
 
-void lval_print(lval* v);
 void lval_expr_print(lval* v, char open, char close) {
   putchar(open);
   for (int i = 0; i < v->count; i++) {
@@ -234,8 +262,6 @@ lval* builtin_op(lval* a, char* op) {
   return x;
 }
 
-lval* lval_eval_sexpr(lval* v);
-
 lval* lval_eval(lval* v) {
   // evaluate Sexpressions
   if (v->type == LVAL_SEXPR) {
@@ -277,9 +303,93 @@ lval* lval_eval_sexpr(lval* v) {
   }
 
   // call builtin with op
-  lval* result = builtin_op(v, f->sym);
+  lval* result = builtin(v, f->sym);
   lval_del(f);
   return result;
+}
+
+lval* builtin(lval* a, char* func) {
+  if (strcmp("list", func) == 0) {
+    return builtin_list(a);
+  }
+  if (strcmp("head", func) == 0) {
+    return builtin_head(a);
+  }
+  if (strcmp("tail", func) == 0) {
+    return builtin_tail(a);
+  }
+  if (strcmp("join", func) == 0) {
+    return builtin_join(a);
+  }
+  if (strcmp("eval", func) == 0) {
+    return builtin_eval(a);
+  }
+  if (strstr("+-*/", func)) {
+    return builtin_op(a, func);
+  }
+
+  lval_del(a);
+  return lval_err("Unknown function");
+}
+
+lval* builtin_head(lval* a) {
+  LASSERT(a, a->count != 1, "Function 'head' takes one and only one qexpr as an argument");
+  LASSERT(a, a->cell[0]->type != LVAL_QEXPR, "Function 'head' takes one and only one qexpr as an argument");
+  LASSERT(a, a->cell[0]->count == 0, "Function 'head' passed {}");
+
+  lval* v = lval_take(a, 0);
+  while(v->count > 1) {
+    lval_del(lval_pop(v, 1));
+  }
+
+  return v;
+}
+
+lval* builtin_tail(lval* a) {
+  LASSERT(a, a->count != 1, "Function 'tail' takes one and only one qexpr as an argument");
+  LASSERT(a, a->cell[0]->type != LVAL_QEXPR, "Function 'tail' takes one and only one qexpr as an argument");
+  LASSERT(a, a->cell[0]->count == 0, "Function 'tail' passed {}");
+
+  lval* v = lval_take(a, 0);
+  lval_del(lval_pop(v, 0));
+  return v;
+}
+
+lval* builtin_list(lval* a) {
+  a->type = LVAL_QEXPR;
+  return a;
+}
+
+lval* builtin_eval(lval* a) {
+  LASSERT(a, a->count == 1, "Function 'eval' passed too many args");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR, "Function 'eval' passed incorrect type");
+
+  lval* x = lval_take(a, 0);
+  x->type = LVAL_SEXPR;
+  return lval_eval(x);
+}
+
+lval* builtin_join(lval* a) {
+  for (int i = 0; i < a->count; i++) {
+    LASSERT(a, a->cell[i]->type == LVAL_QEXPR, "Function 'join' passed incorrect type");
+  }
+
+  lval* x = lval_pop(a, 0);
+  while (a->count) {
+    x = lval_join(x, lval_pop(a, 0));
+  }
+
+  lval_del(a);
+  return x;
+}
+
+lval* lval_join(lval* x, lval* y) {
+  while (y->count) {
+    x = lval_add(x, lval_pop(y, 0));
+  }
+
+  lval_del(y);
+  return x;
 }
 
 int main(int argc, char** argv) {
@@ -294,7 +404,7 @@ int main(int argc, char** argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
       "                                                   \
       number   : /-?[0-9]+/ ;                             \
-      symbol : '+' | '-' | '*' | '/' ;                    \
+      symbol : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | '+' | '-' | '*' | '/' ;                    \
       sexpr : '(' <expr>* ')' ;                           \
       qexpr : '{' <expr>* '}' ;                           \
       expr     : <number> | <symbol> | <sexpr> | <qexpr> ;\
