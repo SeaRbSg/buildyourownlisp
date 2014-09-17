@@ -9,6 +9,8 @@ typedef struct lval {
   struct lval** cell;
 } lval;
 
+enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR }; // lval_types
+
 lval* lval_abstract();
 lval* lval_num(long x);
 lval* lval_err(char* m);
@@ -33,6 +35,7 @@ lval* builtin_tail(lval* a);
 lval* builtin_list(lval* a);
 lval* builtin_eval(lval* a);
 lval* builtin_join(lval* a);
+lval* builtin_cons(lval* a);
 lval* lval_join(lval* x, lval* y);
 
 #define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }

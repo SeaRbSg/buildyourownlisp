@@ -3,8 +3,6 @@
 #include "mpc.h"
 #include "q_expressions.h"
 
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR }; // lval_types
-
 lval* lval_abstract() {
   lval* lv = malloc(sizeof(lval));
   lv->type = -1;
@@ -285,6 +283,9 @@ lval* builtin(lval* a, char* func) {
   if (strcmp("eval", func) == 0) {
     return builtin_eval(a);
   }
+  if (strcmp("cons", func) == 0) {
+    return builtin_cons(a);
+  }
   if (strstr("+-*/", func)) {
     return builtin_op(a, func);
   }
@@ -356,6 +357,27 @@ lval* lval_join(lval* x, lval* y) {
   return x;
 }
 
+lval* builtin_cons(lval* a) {
+  LASSERT(a, a->count == 2, "Function 'cons' must be passed two arguments");
+  LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Second argument must be a Q-expression");
+
+  lval* val = lval_pop(a, 0);
+  lval* qexp = lval_pop(a, 0);
+  lval_del(a);
+
+  // make room for another value
+  qexp->count++;
+  realloc(qexp->cell, sizeof(lval*) * qexp->count);
+
+  // memmove to move everything over by one
+  memmove(&qexp->cell[1], &qexp->cell[0], sizeof(lval*) * (qexp->count-1));
+
+  // put value into qexpr's children
+  qexp->cell[0] = val;
+
+  return qexp;
+}
+
 int main(int argc, char** argv) {
 
   mpc_parser_t* Number = mpc_new("number");
@@ -368,7 +390,7 @@ int main(int argc, char** argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
       "                                                   \
       number   : /-?[0-9]+/ ;                             \
-      symbol : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | '+' | '-' | '*' | '/' ;                    \
+      symbol : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | '+' | '-' | '*' | '/' ;                    \
       sexpr : '(' <expr>* ')' ;                           \
       qexpr : '{' <expr>* '}' ;                           \
       expr     : <number> | <symbol> | <sexpr> | <qexpr> ;\
