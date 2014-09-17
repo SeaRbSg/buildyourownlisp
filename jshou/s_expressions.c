@@ -94,8 +94,12 @@ lval* lval_read_num(mpc_ast_t* t) {
 }
 
 lval* lval_read(mpc_ast_t* t) {
-  if (strstr(t->tag, "number")) { return lval_read_num(t); }
-  if (strstr(t->tag, "symbol")) { return lval_sym(t->contents); }
+  if (strstr(t->tag, "number")) {
+    return lval_read_num(t);
+  }
+  if (strstr(t->tag, "sexpr")) {
+    return lval_sym(t->contents);
+  }
 
   lval* x = NULL;
   if (strcmp(t->tag, ">") == 0) { x = lval_sexpr(); } // root
