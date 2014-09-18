@@ -37,5 +37,6 @@ lval* builtin_eval(lval* a);
 lval* builtin_join(lval* a);
 lval* builtin_cons(lval* a);
 lval* lval_join(lval* x, lval* y);
+lval* builtin_len(lval* a);
 
 #define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }

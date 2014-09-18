@@ -286,6 +286,9 @@ lval* builtin(lval* a, char* func) {
   if (strcmp("cons", func) == 0) {
     return builtin_cons(a);
   }
+  if (strcmp("len", func) == 0) {
+    return builtin_len(a);
+  }
   if (strstr("+-*/", func)) {
     return builtin_op(a, func);
   }
@@ -378,6 +381,18 @@ lval* builtin_cons(lval* a) {
   return qexp;
 }
 
+lval* builtin_len(lval* a) {
+  LASSERT(a, a->count == 1, "Function 'len' must be passed one argument");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR, "Function 'len' passed wrong type");
+
+  lval* qexp = a->cell[0];
+  int length = qexp->count;
+
+  lval_del(a);
+
+  return lval_num(length);
+}
+
 int main(int argc, char** argv) {
 
   mpc_parser_t* Number = mpc_new("number");
@@ -390,7 +405,7 @@ int main(int argc, char** argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
       "                                                   \
       number   : /-?[0-9]+/ ;                             \
-      symbol : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | '+' | '-' | '*' | '/' ;                    \
+      symbol : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | \"len\" | '+' | '-' | '*' | '/' ;                    \
       sexpr : '(' <expr>* ')' ;                           \
       qexpr : '{' <expr>* '}' ;                           \
       expr     : <number> | <symbol> | <sexpr> | <qexpr> ;\
