@@ -1,0 +1,10 @@
+1) Write a regular expressions matching strings of all a or b such as aababa bbaa
+/[ab]+/
+
+2) Write a regular expression matching strings of consecutive a and b such as ababab or aba
+/(ab)+a?/
+
+3) Write a regular expressions matching pit, pot and respite but not peat, spit, or part
+/^(p.t|.+p.t.+)/
+
+4) 
