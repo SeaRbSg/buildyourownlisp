@@ -35,6 +35,8 @@ typedef struct lval {
 #define L_ERR(lval)       (lval)->v.err
 #define L_SYM(lval)       (lval)->v.sym
 
+#define RETURN_ERR(s, msg) lval_del(s); return lval_err(msg)
+
 // prototypes -- via cproto -- I'm not a masochist.
 
 /* ch09.c */
@@ -230,8 +232,7 @@ lval* lval_take(lval* v, int i) { // TODO: prove lval_del is appropriate
 lval* builtin_op(lval* a, char* op) {
   for (int i = 0; i < L_COUNT(a); i++) {
     if (L_TYPE_N(a, i) != LVAL_NUM) {
-      lval_del(a);
-      return lval_err(LERR_NON_NUMBER);
+      RETURN_ERR(a, LERR_NON_NUMBER);
     }
   }
 
@@ -309,8 +310,7 @@ lval* lval_eval_sexp(lval* v) {
 
   if (L_TYPE(f) != LVAL_SYM) {
     lval_del(f);
-    lval_del(v);
-    return lval_err(LERR_BAD_SEXP);
+    RETURN_ERR(v, LERR_BAD_SEXP);
   }
 
   lval* result = builtin_op(v, L_SYM(f));
