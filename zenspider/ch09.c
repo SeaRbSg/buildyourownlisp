@@ -149,10 +149,7 @@ lval* lval_read_num(mpc_ast_t* t) {
 lval* lval_read(mpc_ast_t* t) {
   lval* x = NULL;
 
-  mpc_ast_print(t);
-  printf("TAG=%s\n", t->tag);
-
-  if (strstr(t->tag, "number")) { printf("NUMBER\n"); return lval_read_num(t);      }
+  if (strstr(t->tag, "number")) { return lval_read_num(t);      }
   if (strstr(t->tag, "symbol")) { return lval_sym(t->contents); }
   if (strcmp(t->tag, ">") == 0) { x = lval_sexp();              }
   if (strstr(t->tag, "sexp"))   { x = lval_sexp();              }
@@ -334,10 +331,6 @@ int main() {
     add_history(input);
 
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
-      printf("input = \n");
-      mpc_ast_print(r.output);
-      printf("\n");
-
       lval* x = lval_eval(lval_read(r.output));
       lval_println(x);
       lval_del(x);
