@@ -26,14 +26,14 @@ typedef struct lval {
   } v;
 } lval;
 
-#define L_COUNT(lval) (lval)->v.sexp.count
-#define L_CELL(lval)  (lval)->v.sexp.cell
-#define L_CELL_N(lval, n)  (lval)->v.sexp.cell[(n)]
-#define L_TYPE(lval)  (lval)->type
+#define L_COUNT(lval)     (lval)->v.sexp.count
+#define L_CELL(lval)      (lval)->v.sexp.cell
+#define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
+#define L_TYPE(lval)      (lval)->type
 #define L_TYPE_N(lval, n) L_CELL_N(lval, n)->type
-#define L_NUM(lval)   (lval)->v.num
-#define L_ERR(lval)   (lval)->v.err
-#define L_SYM(lval)   (lval)->v.sym
+#define L_NUM(lval)       (lval)->v.num
+#define L_ERR(lval)       (lval)->v.err
+#define L_SYM(lval)       (lval)->v.sym
 
 // prototypes -- via cproto -- I'm not a masochist.
 
