@@ -66,10 +66,22 @@ lval* builtin_len(lenv* e, lval* a);
 lval* builtin_init(lenv* e, lval* a);
 lval* builtin_def(lenv* e, lval* a);
 
+#define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
 
-#define LASSERT(args, cond, fmt, ...) \
-  if (!(cond)) { \
-    lval * err = lval_err(fmt, ##__VA_ARGS__); \
+#define LASSERT_NUM_ARGS(args, function, num, expected_num) { \
+  if (num != expected_num) { \
+    char* format = "Function '%s' passed wrong type. Got %d, expected %d."; \
+    lval* err = lval_err(format, function, num, expected_num); \
     lval_del(args); \
     return err; \
-  }
+  } \
+};
+
+#define LASSERT_TYPE(args, function, actual, expected_type) { \
+  if (actual != expected_type) { \
+    char* format = "Function '%s' passed wrong type. Got %s, expected %s."; \
+    lval* err = lval_err(format, function, ltype_name(actual), ltype_name(expected_type)); \
+    lval_del(args); \
+    return err; \
+  } \
+};
