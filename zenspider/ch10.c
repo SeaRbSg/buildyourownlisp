@@ -28,14 +28,20 @@ typedef struct lval {
 
 #define L_COUNT(lval)     (lval)->v.sexp.count
 #define L_CELL(lval)      (lval)->v.sexp.cell
-#define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
 #define L_TYPE(lval)      (lval)->type
-#define L_TYPE_N(lval, n) L_CELL_N(lval, n)->type
 #define L_NUM(lval)       (lval)->v.num
 #define L_ERR(lval)       (lval)->v.err
 #define L_SYM(lval)       (lval)->v.sym
 
+// child accessors
+#define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
+#define L_TYPE_N(lval, n) L_CELL_N(lval, n)->type
+#define L_COUNT_N(lval, n) L_COUNT(L_CELL_N(lval, n))
+
 #define RETURN_ERR(s, msg) lval_del(s); return lval_err(msg)
+
+#define LOOKUP(a, b) strcmp((a), (b)) == 0
+#define SUBSTR(a, b) strstr((a), (b))
 
 // prototypes -- via cproto -- I'm not a masochist.
 
@@ -173,21 +179,21 @@ lval* lval_read_num(mpc_ast_t* t) {
 lval* lval_read(mpc_ast_t* t) {
   lval* x = NULL;
 
-  if (strstr(t->tag, "number")) { return lval_read_num(t);      }
-  if (strstr(t->tag, "symbol")) { return lval_sym(t->contents); }
-  if (strcmp(t->tag, ">") == 0) { x = lval_sexp();              }
-  if (strstr(t->tag, "sexp"))   { x = lval_sexp();              }
-  if (strstr(t->tag, "qexp"))   { x = lval_qexp();              }
+  if (SUBSTR(t->tag, "number")) { return lval_read_num(t);      }
+  if (SUBSTR(t->tag, "symbol")) { return lval_sym(t->contents); }
+  if (LOOKUP(t->tag, ">"))      { x = lval_sexp();              }
+  if (SUBSTR(t->tag, "sexp"))   { x = lval_sexp();              }
+  if (SUBSTR(t->tag, "qexp"))   { x = lval_qexp();              }
 
   for (int i = 0; i < t->children_num; i++) {
     mpc_ast_t* child = t->children[i];
     char * contents = child->contents;
 
-    if (strcmp(contents, "(") == 0)        { continue; }
-    if (strcmp(contents, ")") == 0)        { continue; }
-    if (strcmp(contents, "{") == 0)        { continue; }
-    if (strcmp(contents, "}") == 0)        { continue; }
-    if (strcmp(child->tag,  "regex") == 0) { continue; }
+    if (LOOKUP(contents, "("))        { continue; }
+    if (LOOKUP(contents, ")"))        { continue; }
+    if (LOOKUP(contents, "{"))        { continue; }
+    if (LOOKUP(contents, "}"))        { continue; }
+    if (LOOKUP(child->tag,  "regex")) { continue; }
 
     x = lval_add(x, lval_read(child));
   }
@@ -238,7 +244,7 @@ lval* builtin_op(lval* a, char* op) {
 
   lval* x = lval_pop(a, 0);
 
-  if ((strcmp(op, "-") == 0) && L_COUNT(a) == 0) {
+  if (LOOKUP(op, "-") && L_COUNT(a) == 0) {
     L_NUM(x) *= -1;
   }
 
@@ -249,10 +255,10 @@ lval* builtin_op(lval* a, char* op) {
     long b = L_NUM(y);
 
     // TODO: convert to lookup table
-    if (strcmp(op, "+") == 0)   { L_NUM(x) += b; }
-    if (strcmp(op, "-") == 0)   { L_NUM(x) -= b; }
-    if (strcmp(op, "*") == 0)   { L_NUM(x) *= b; }
-    if (strcmp(op, "/") == 0)   {
+    if (LOOKUP(op, "+"))   { L_NUM(x) += b; }
+    if (LOOKUP(op, "-"))   { L_NUM(x) -= b; }
+    if (LOOKUP(op, "*"))   { L_NUM(x) *= b; }
+    if (LOOKUP(op, "/"))   {
       if (b == 0) {
         lval_del(x);
         lval_del(y);
@@ -261,7 +267,7 @@ lval* builtin_op(lval* a, char* op) {
       }
       L_NUM(x) /= b;
     }
-    if (strcmp(op, "%") == 0) {
+    if (LOOKUP(op, "%")) {
       if (b == 0) {
         lval_del(x);
         lval_del(y);
@@ -270,11 +276,11 @@ lval* builtin_op(lval* a, char* op) {
       }
       L_NUM(x) %= b;
     }
-    if (strcmp(op, "^") == 0)   {
+    if (LOOKUP(op, "^"))   {
       L_NUM(x) = pow(a, b);
     }
-    if (strcmp(op, "min") == 0) { L_NUM(x) = a <= b ? a : b; }
-    if (strcmp(op, "max") == 0) { L_NUM(x) = a >= b ? a : b; }
+    if (LOOKUP(op, "min")) { L_NUM(x) = a <= b ? a : b; }
+    if (LOOKUP(op, "max")) { L_NUM(x) = a >= b ? a : b; }
 
     // TODO?
     // fprintf(stderr, "WARNING: unknown operator '%s'\n", op);
