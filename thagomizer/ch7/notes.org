@@ -4,4 +4,4 @@
 * How would you use strcmp to see if a node had the contents '(' or ')'.
 ** (strcmp(t->contents, "(") == 0) || (strcmp(t->contents, ")" == 0)
 
-* 
+
