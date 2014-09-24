@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 
-enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_ERR };
+enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR };
 
 #define LERR_DIV_ZERO "Division by zero"
 #define LERR_BAD_OP   "Invalid operator"
@@ -33,6 +33,7 @@ lval *lval_num(long x);
 lval *lval_err(char *m);
 lval *lval_sym(char *s);
 lval *lval_sexp(void);
+lval *lval_qexp(void);
 lval *lval_add(lval *v, lval *x);
 void lval_del(lval *v);
 lval *lval_read_num(mpc_ast_t *t);
@@ -77,6 +78,14 @@ lval* lval_sexp(void) {
   return v;
 }
 
+lval* lval_qexp(void) {
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_QEXP;
+  v->v.sexp.count = 0;
+  v->v.sexp.cell = NULL;
+  return v;
+}
+
 void lval_print(lval* v) {
   switch (v->type) {
   case LVAL_NUM:
@@ -87,6 +96,9 @@ void lval_print(lval* v) {
     break;
   case LVAL_SEXP:
     lval_expr_print(v, '(', ')');
+    break;
+  case LVAL_QEXP:
+    lval_expr_print(v, '{', '}');
     break;
   case LVAL_ERR:
     printf("Error: %s", v->v.err);
@@ -125,6 +137,7 @@ void lval_del(lval* v) {
     free(v->v.sym);
     break;
   case LVAL_SEXP:
+  case LVAL_QEXP:
     for (int i = 0; i < v->v.sexp.count; i++) {
       lval_del(v->v.sexp.cell[i]);
     }
@@ -153,6 +166,7 @@ lval* lval_read(mpc_ast_t* t) {
   if (strstr(t->tag, "symbol")) { return lval_sym(t->contents); }
   if (strcmp(t->tag, ">") == 0) { x = lval_sexp();              }
   if (strstr(t->tag, "sexp"))   { x = lval_sexp();              }
+  if (strstr(t->tag, "qexp"))   { x = lval_qexp();              }
 
   for (int i = 0; i < t->children_num; i++) {
     mpc_ast_t* child = t->children[i];
