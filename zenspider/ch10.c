@@ -313,6 +313,7 @@ int main() {
   mpc_parser_t* Number   = mpc_new("number");
   mpc_parser_t* Symbol   = mpc_new("symbol");
   mpc_parser_t* Sexp     = mpc_new("sexp");
+  mpc_parser_t* Qexp     = mpc_new("qexp");
   mpc_parser_t* Expr     = mpc_new("expr");
   mpc_parser_t* Lispy    = mpc_new("lispy");
   mpc_result_t r;
@@ -321,9 +322,10 @@ int main() {
             number   : /-?[0-9]+(\\.[0-9]+)?/;                  \
             symbol   : '+' | '-' | '*' | '/' | '%' | '^' | /[a-zA-Z][a-zA-Z0-9-]*/; \
             sexp     : '(' <expr>* ')';                         \
-            expr     : <number> | <symbol> | <sexp>;            \
+            qexp     : '{' <expr>* '}';                         \
+            expr     : <number> | <symbol> | <sexp> | <qexp>;   \
             lispy    : /^/ <expr>* /$/;                         ",
-            Number, Symbol, Sexp, Expr, Lispy);
+            Number, Symbol, Sexp, Qexp, Expr, Lispy);
 
   while (1) {
     char * input = readline("lispy> ");
@@ -344,5 +346,5 @@ int main() {
     free(input);
   }
 
-  mpc_cleanup(5, Number, Symbol, Sexp, Expr, Lispy);
+  mpc_cleanup(6, Number, Symbol, Sexp, Qexp, Expr, Lispy);
 }
