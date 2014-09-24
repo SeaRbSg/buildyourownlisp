@@ -26,6 +26,13 @@ typedef struct lval {
   } v;
 } lval;
 
+#define L_COUNT(lval) (lval)->v.sexp.count
+#define L_CELL(lval)  (lval)->v.sexp.cell
+#define L_TYPE(lval)  (lval)->type
+#define L_NUM(lval)   (lval)->v.num
+#define L_ERR(lval)   (lval)->v.err
+#define L_SYM(lval)   (lval)->v.sym
+
 // prototypes -- via cproto -- I'm not a masochist.
 
 /* ch09.c */
@@ -49,50 +56,50 @@ int main(void);
 
 lval* lval_num(long x) {
   lval* v = malloc(sizeof(lval));
-  v->type = LVAL_NUM;
-  v->v.num = x;
+  L_TYPE(v) = LVAL_NUM;
+  L_NUM(v) = x;
   return v;
 }
 
 lval* lval_err(char* m) {
   lval* v = malloc(sizeof(lval));
-  v->type = LVAL_ERR;
-  v->v.err = malloc(strlen(m) + 1);
-  strcpy(v->v.err, m);
+  L_TYPE(v) = LVAL_ERR;
+  L_ERR(v) = malloc(strlen(m) + 1);
+  strcpy(L_ERR(v), m);
   return v;
 }
 
 lval* lval_sym(char* s) {
   lval* v = malloc(sizeof(lval));
-  v->type = LVAL_SYM;
-  v->v.sym = malloc(strlen(s) + 1);
-  strcpy(v->v.sym, s);
+  L_TYPE(v) = LVAL_SYM;
+  L_SYM(v) = malloc(strlen(s) + 1);
+  strcpy(L_SYM(v), s);
   return v;
 }
 
 lval* lval_sexp(void) {
   lval* v = malloc(sizeof(lval));
-  v->type = LVAL_SEXP;
-  v->v.sexp.count = 0;
-  v->v.sexp.cell = NULL;
+  L_TYPE(v) = LVAL_SEXP;
+  L_COUNT(v) = 0;
+  L_CELL(v) = NULL;
   return v;
 }
 
 lval* lval_qexp(void) {
   lval* v = malloc(sizeof(lval));
-  v->type = LVAL_QEXP;
-  v->v.sexp.count = 0;
-  v->v.sexp.cell = NULL;
+  L_TYPE(v) = LVAL_QEXP;
+  L_COUNT(v) = 0;
+  L_CELL(v) = NULL;
   return v;
 }
 
 void lval_print(lval* v) {
-  switch (v->type) {
+  switch (L_TYPE(v)) {
   case LVAL_NUM:
-    printf("%li", v->v.num);
+    printf("%li", L_NUM(v));
     break;
   case LVAL_SYM:
-    printf("%s", v->v.sym);
+    printf("%s", L_SYM(v));
     break;
   case LVAL_SEXP:
     lval_expr_print(v, '(', ')');
@@ -101,10 +108,10 @@ void lval_print(lval* v) {
     lval_expr_print(v, '{', '}');
     break;
   case LVAL_ERR:
-    printf("Error: %s", v->v.err);
+    printf("Error: %s", L_ERR(v));
     break;
   default:
-    printf("Unknown lval type: %d", v->type);
+    printf("Unknown lval type: %d", L_TYPE(v));
   }
 }
 
@@ -114,7 +121,7 @@ void lval_println(lval* v) {
 }
 
 lval* lval_eval(lval* v) {
-  if (v->type == LVAL_SEXP) {
+  if (L_TYPE(v) == LVAL_SEXP) {
     return lval_eval_sexp(v);
   }
 
@@ -123,31 +130,31 @@ lval* lval_eval(lval* v) {
 }
 
 lval* lval_add(lval* v, lval *x) {
-  v->v.sexp.count++;
-  v->v.sexp.cell = realloc(v->v.sexp.cell, sizeof(lval*) * v->v.sexp.count);
-  v->v.sexp.cell[v->v.sexp.count - 1] = x;
+  L_COUNT(v)++;
+  L_CELL(v) = realloc(L_CELL(v), sizeof(lval*) * L_COUNT(v));
+  L_CELL(v)[L_COUNT(v) - 1] = x;
   return v;
 }
 
 void lval_del(lval* v) {
-  switch (v->type) {
+  switch (L_TYPE(v)) {
   case LVAL_NUM:
     break;
   case LVAL_SYM:
-    free(v->v.sym);
+    free(L_SYM(v));
     break;
   case LVAL_SEXP:
   case LVAL_QEXP:
-    for (int i = 0; i < v->v.sexp.count; i++) {
-      lval_del(v->v.sexp.cell[i]);
+    for (int i = 0; i < L_COUNT(v); i++) {
+      lval_del(L_CELL(v)[i]);
     }
-    free(v->v.sexp.cell);
+    free(L_CELL(v));
     break;
   case LVAL_ERR:
-    free(v->v.err);
+    free(L_ERR(v));
     break;
   default:
-    printf("Unknown lval type: %d", v->type);
+    printf("Unknown lval type: %d", L_TYPE(v));
     break;
   }
   free(v);
@@ -187,10 +194,10 @@ lval* lval_read(mpc_ast_t* t) {
 void lval_expr_print(lval* v, char open, char close) {
   putchar(open);
 
-  int max = v->v.sexp.count - 1;
+  int max = L_COUNT(v) - 1;
 
-  for (int i = 0; i < v->v.sexp.count; i++) {
-    lval_print(v->v.sexp.cell[i]);
+  for (int i = 0; i < L_COUNT(v); i++) {
+    lval_print(L_CELL(v)[i]);
 
     if (i != max) {
       putchar(' ');
@@ -202,7 +209,7 @@ void lval_expr_print(lval* v, char open, char close) {
 
 lval* lval_pop(lval* v, int i) {
   sexp * s = &v->v.sexp;
-  lval* x = v->v.sexp.cell[i];
+  lval* x = L_CELL(v)[i];
 
   memmove(&s->cell[i], &s->cell[i+1], sizeof(lval*) * (s->count-i-1));
   s->count--;
@@ -219,8 +226,8 @@ lval* lval_take(lval* v, int i) { // TODO: prove lval_del is appropriate
 }
 
 lval* builtin_op(lval* a, char* op) {
-  for (int i = 0; i < a->v.sexp.count; i++) {
-    if (a->v.sexp.cell[i]->type != LVAL_NUM) {
+  for (int i = 0; i < L_COUNT(a); i++) {
+    if (L_TYPE(L_CELL(a)[i]) != LVAL_NUM) {
       lval_del(a);
       return lval_err(LERR_NON_NUMBER);
     }
@@ -228,20 +235,20 @@ lval* builtin_op(lval* a, char* op) {
 
   lval* x = lval_pop(a, 0);
 
-  if ((strcmp(op, "-") == 0) && a->v.sexp.count == 0) {
-    x->v.num *= -1;
+  if ((strcmp(op, "-") == 0) && L_COUNT(a) == 0) {
+    L_NUM(x) *= -1;
   }
 
-  while (a->v.sexp.count > 0) {
+  while (L_COUNT(a) > 0) {
     lval* y = lval_pop(a, 0);
 
-    long a = x->v.num;
-    long b = y->v.num;
+    long a = L_NUM(x);
+    long b = L_NUM(y);
 
     // TODO: convert to lookup table
-    if (strcmp(op, "+") == 0)   { x->v.num += b; }
-    if (strcmp(op, "-") == 0)   { x->v.num -= b; }
-    if (strcmp(op, "*") == 0)   { x->v.num *= b; }
+    if (strcmp(op, "+") == 0)   { L_NUM(x) += b; }
+    if (strcmp(op, "-") == 0)   { L_NUM(x) -= b; }
+    if (strcmp(op, "*") == 0)   { L_NUM(x) *= b; }
     if (strcmp(op, "/") == 0)   {
       if (b == 0) {
         lval_del(x);
@@ -249,7 +256,7 @@ lval* builtin_op(lval* a, char* op) {
         x = lval_err(LERR_DIV_ZERO);
         break;
       }
-      x->v.num /= b;
+      L_NUM(x) /= b;
     }
     if (strcmp(op, "%") == 0) {
       if (b == 0) {
@@ -258,13 +265,13 @@ lval* builtin_op(lval* a, char* op) {
         x = lval_err(LERR_DIV_ZERO);
         break;
       }
-      x->v.num %= b;
+      L_NUM(x) %= b;
     }
     if (strcmp(op, "^") == 0)   {
-      x->v.num = pow(a, b);
+      L_NUM(x) = pow(a, b);
     }
-    if (strcmp(op, "min") == 0) { x->v.num = a <= b ? a : b; }
-    if (strcmp(op, "max") == 0) { x->v.num = a >= b ? a : b; }
+    if (strcmp(op, "min") == 0) { L_NUM(x) = a <= b ? a : b; }
+    if (strcmp(op, "max") == 0) { L_NUM(x) = a >= b ? a : b; }
 
     // TODO?
     // fprintf(stderr, "WARNING: unknown operator '%s'\n", op);
@@ -278,33 +285,33 @@ lval* builtin_op(lval* a, char* op) {
 }
 
 lval* lval_eval_sexp(lval* v) {
-  for (int i = 0; i < v->v.sexp.count; i++) {
-    v->v.sexp.cell[i] = lval_eval(v->v.sexp.cell[i]);
+  for (int i = 0; i < L_COUNT(v); i++) {
+    L_CELL(v)[i] = lval_eval(L_CELL(v)[i]);
   }
 
-  for (int i = 0; i < v->v.sexp.count; i++) {
-    if (v->v.sexp.cell[i]->type == LVAL_ERR) {
+  for (int i = 0; i < L_COUNT(v); i++) {
+    if (L_TYPE(L_CELL(v)[i]) == LVAL_ERR) {
       return lval_take(v, i);
     }
   }
 
-  if (v->v.sexp.count == 0) {
+  if (L_COUNT(v) == 0) {
     return v;
   }
 
-  if (v->v.sexp.count == 1) {
+  if (L_COUNT(v) == 1) {
     return lval_take(v, 0);
   }
 
   lval* f = lval_pop(v, 0);
 
-  if (f->type != LVAL_SYM) {
+  if (L_TYPE(f) != LVAL_SYM) {
     lval_del(f);
     lval_del(v);
     return lval_err(LERR_BAD_SEXP);
   }
 
-  lval* result = builtin_op(v, f->v.sym);
+  lval* result = builtin_op(v, L_SYM(f));
   lval_del(f);
   return result;
 }
