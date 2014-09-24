@@ -28,7 +28,9 @@ typedef struct lval {
 
 #define L_COUNT(lval) (lval)->v.sexp.count
 #define L_CELL(lval)  (lval)->v.sexp.cell
+#define L_CELL_N(lval, n)  (lval)->v.sexp.cell[(n)]
 #define L_TYPE(lval)  (lval)->type
+#define L_TYPE_N(lval, n) L_CELL_N(lval, n)->type
 #define L_NUM(lval)   (lval)->v.num
 #define L_ERR(lval)   (lval)->v.err
 #define L_SYM(lval)   (lval)->v.sym
@@ -132,7 +134,7 @@ lval* lval_eval(lval* v) {
 lval* lval_add(lval* v, lval *x) {
   L_COUNT(v)++;
   L_CELL(v) = realloc(L_CELL(v), sizeof(lval*) * L_COUNT(v));
-  L_CELL(v)[L_COUNT(v) - 1] = x;
+  L_CELL_N(v, L_COUNT(v) - 1) = x;
   return v;
 }
 
@@ -146,7 +148,7 @@ void lval_del(lval* v) {
   case LVAL_SEXP:
   case LVAL_QEXP:
     for (int i = 0; i < L_COUNT(v); i++) {
-      lval_del(L_CELL(v)[i]);
+      lval_del(L_CELL_N(v, i));
     }
     free(L_CELL(v));
     break;
@@ -197,7 +199,7 @@ void lval_expr_print(lval* v, char open, char close) {
   int max = L_COUNT(v) - 1;
 
   for (int i = 0; i < L_COUNT(v); i++) {
-    lval_print(L_CELL(v)[i]);
+    lval_print(L_CELL_N(v, i));
 
     if (i != max) {
       putchar(' ');
@@ -209,7 +211,7 @@ void lval_expr_print(lval* v, char open, char close) {
 
 lval* lval_pop(lval* v, int i) {
   sexp * s = &v->v.sexp;
-  lval* x = L_CELL(v)[i];
+  lval* x = L_CELL_N(v, i);
 
   memmove(&s->cell[i], &s->cell[i+1], sizeof(lval*) * (s->count-i-1));
   s->count--;
@@ -227,7 +229,7 @@ lval* lval_take(lval* v, int i) { // TODO: prove lval_del is appropriate
 
 lval* builtin_op(lval* a, char* op) {
   for (int i = 0; i < L_COUNT(a); i++) {
-    if (L_TYPE(L_CELL(a)[i]) != LVAL_NUM) {
+    if (L_TYPE_N(a, i) != LVAL_NUM) {
       lval_del(a);
       return lval_err(LERR_NON_NUMBER);
     }
@@ -286,11 +288,11 @@ lval* builtin_op(lval* a, char* op) {
 
 lval* lval_eval_sexp(lval* v) {
   for (int i = 0; i < L_COUNT(v); i++) {
-    L_CELL(v)[i] = lval_eval(L_CELL(v)[i]);
+    L_CELL_N(v, i) = lval_eval(L_CELL_N(v, i));
   }
 
   for (int i = 0; i < L_COUNT(v); i++) {
-    if (L_TYPE(L_CELL(v)[i]) == LVAL_ERR) {
+    if (L_TYPE_N(v, i) == LVAL_ERR) {
       return lval_take(v, i);
     }
   }
