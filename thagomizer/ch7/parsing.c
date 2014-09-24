@@ -29,9 +29,13 @@ long eval(mpc_ast_t* t) {
   /* We store the third child in `x` */
   long x = eval(t->children[2]);
 
-  /* Iterate the remaining children, combining using our operator */
-  for (int i = 3; strstr(t->children[i]->tag, "expr"); i++) {
-    x = eval_op(x, op, eval(t->children[i]));
+  if (t->children_num == 4 && strcmp(op, "-") == 0) {
+    x = x * -1;
+  } else {
+    /* Iterate the remaining children, combining using our operator */
+    for (int i = 3; strstr(t->children[i]->tag, "expr"); i++) {
+      x = eval_op(x, op, eval(t->children[i]));
+    }
   }
   
   return x;
