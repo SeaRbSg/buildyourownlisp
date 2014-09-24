@@ -8,6 +8,7 @@ all: \
 	ch07 \
 	ch08 \
 	ch09 \
+	ch10 \
 	$(NULL)
 
 ch04: ch04.c
@@ -21,6 +22,8 @@ ch07: ch07.c mpc.c
 ch08: ch08.c mpc.c
 
 ch09: ch09.c mpc.c
+
+ch10: ch10.c mpc.c
 
 .PHONY: clean realclean
 clean:
