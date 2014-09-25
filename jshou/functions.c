@@ -122,10 +122,10 @@ lval* lval_qexpr(void) {
   return v;
 }
 
-lval* lval_fun(lbuiltin func) {
+lval* lval_builtin_function(lbuiltin builtin) {
   lval* v = lval_abstract();
   v->type = LVAL_FUN;
-  v->fun = func;
+  v->builtin = builtin;
   return v;
 }
 
@@ -198,7 +198,7 @@ lval* lval_copy(lval* v) {
 
   switch(v->type) {
     case LVAL_FUN:
-      x->fun = v->fun;
+      x->builtin = v->builtin;
       break;
     case LVAL_NUM:
       x->num = v->num;
@@ -381,14 +381,14 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
   }
 
   // call function
-  lval* result = f->fun(e, v);
+  lval* result = f->builtin(e, v);
   lval_del(f);
   return result;
 }
 
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
   lval* k = lval_sym(name);
-  lval* v = lval_fun(func);
+  lval* v = lval_builtin_function(func);
 
   lenv_put(e, k, v);
 

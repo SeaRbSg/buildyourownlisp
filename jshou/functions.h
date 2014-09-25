@@ -7,11 +7,18 @@ typedef lval*(*lbuiltin)(lenv*, lval*);
 struct lval {
   int type;
 
+  // basic
   long num;
   char* err;
   char* sym;
-  lbuiltin fun;
 
+  // function
+  lbuiltin builtin;
+  lenv* lenv;
+  lval* formulas;
+  lval* body;
+
+  // expression
   int count; // count and pointer to list of lval*
   struct lval** cell;
 };
@@ -35,7 +42,8 @@ lval* lval_err(char* fmt, ...);
 lval* lval_sym(char* x);
 lval* lval_sexpr(void);
 lval* lval_qepxr(void);
-lval* lval_fun(lbuiltin func);
+lval* lval_builtin_function(lbuiltin builtin);
+lval* lval_lambda(lval* formals, lval* body);
 void lval_del(lval* v);
 lval* lval_add(lval* v, lval* x);
 lval* lval_read_num(mpc_ast_t* t);
