@@ -6,7 +6,8 @@ all: \
 	s_expressions \
 	q_expressions \
 	variables \
-	functions
+	functions \
+	$(NULL)
 
 %: %.o mpc.o
 	$(CC) $(CFLAGS) -o $@ $*.o mpc.o $(LDFLAGS)
