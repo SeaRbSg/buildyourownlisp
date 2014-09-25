@@ -82,15 +82,22 @@ lval *lval_eval(lval *v);
 long count_leaves(mpc_ast_t *t);
 int main(void);
 
-lval* lval_num(long x) {
+lval* lval_new() {
   lval* v = malloc(sizeof(lval));
+  L_TYPE(v) = -1;
+  L_NUM(v) = 0xFFFFFFFF;
+  return v;
+}
+
+lval* lval_num(long x) {
+  lval* v = lval_new();
   L_TYPE(v) = LVAL_NUM;
   L_NUM(v) = x;
   return v;
 }
 
 lval* lval_err(char* m) {
-  lval* v = malloc(sizeof(lval));
+  lval* v = lval_new();
   L_TYPE(v) = LVAL_ERR;
   L_ERR(v) = malloc(strlen(m) + 1);
   strcpy(L_ERR(v), m);
@@ -98,15 +105,13 @@ lval* lval_err(char* m) {
 }
 
 lval* lval_sym(char* s) {
-  lval* v = malloc(sizeof(lval));
+  lval* v = lval_err(s);
   L_TYPE(v) = LVAL_SYM;
-  L_SYM(v) = malloc(strlen(s) + 1);
-  strcpy(L_SYM(v), s);
   return v;
 }
 
 lval* lval_sexp(void) {
-  lval* v = malloc(sizeof(lval));
+  lval* v = lval_new();
   L_TYPE(v) = LVAL_SEXP;
   L_COUNT(v) = 0;
   L_CELL(v) = NULL;
@@ -114,10 +119,8 @@ lval* lval_sexp(void) {
 }
 
 lval* lval_qexp(void) {
-  lval* v = malloc(sizeof(lval));
+  lval* v = lval_sexp();
   L_TYPE(v) = LVAL_QEXP;
-  L_COUNT(v) = 0;
-  L_CELL(v) = NULL;
   return v;
 }
 
