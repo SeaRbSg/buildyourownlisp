@@ -8,17 +8,8 @@ all: \
 	variables \
 	functions
 
-s_expressions: s_expressions.o mpc.o
-	$(CC) $(CFLAGS) -o s_expressions s_expressions.o mpc.o $(LDFLAGS)
-
-q_expressions: q_expressions.o mpc.o
-	$(CC) $(CFLAGS) -o q_expressions q_expressions.o mpc.o $(LDFLAGS)
-
-variables: variables.o mpc.o
-	$(CC) $(CFLAGS) -o variables variables.o mpc.o $(LDFLAGS)
-
-functions: functions.o mpc.o
-	$(CC) $(CFLAGS) -o functions functions.o mpc.o $(LDFLAGS)
+%: %.o mpc.o
+	$(CC) $(CFLAGS) -o $@ $*.o mpc.o $(LDFLAGS)
 
 .PHONY: clean realclean
 clean:
