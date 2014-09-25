@@ -4,11 +4,13 @@ all: \
 	s_expressions \
 	q_expressions \
   variables \
+  functions \
 	$(NULL)
 
 s_expressions: s_expressions.c mpc.c
 q_expressions: q_expressions.c mpc.c
 variables: variables.c mpc.c
+functions: functions.c mpc.c
 
 .PHONY: clean realclean
 clean:
