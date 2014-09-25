@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-std=c99 -Wall -pedantic -g -O0
-LDFLAGS = -lreadline -lm
+LDLIBS = -lreadline -lm
 
 all: \
 	s_expressions \
@@ -9,8 +9,8 @@ all: \
 	functions \
 	$(NULL)
 
-%: %.o mpc.o
-	$(CC) $(CFLAGS) -o $@ $*.o mpc.o $(LDFLAGS)
+%: %.c mpc.c
+	$(CC) $(CFLAGS) -o $@ $*.c mpc.c $(LDLIBS)
 
 .PHONY: clean realclean
 clean:
