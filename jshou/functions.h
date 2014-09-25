@@ -24,6 +24,7 @@ struct lval {
 };
 
 struct lenv {
+  lenv* par;
   int count;
   char** syms;
   lval** vals;
@@ -36,6 +37,8 @@ lenv* lenv_new(void);
 void lenv_del(lenv* e);
 lval* lenv_get(lenv* e, lval* k);
 void lenv_put(lenv* e, lval* k, lval* v);
+void lenv_def(lenv* e, lval* k, lval* v);
+lenv* lenv_copy(lenv* e);
 lval* lval_abstract();
 lval* lval_num(long x);
 lval* lval_err(char* fmt, ...);
@@ -72,7 +75,10 @@ lval* builtin_cons(lenv* e, lval* a);
 lval* lval_join(lval* x, lval* y);
 lval* builtin_len(lenv* e, lval* a);
 lval* builtin_init(lenv* e, lval* a);
+lval* builtin_var(lenv* e, lval* a, char* func);
 lval* builtin_def(lenv* e, lval* a);
+lval* builtin_put(lenv* e, lval* a);
+lval* builtin_lambda(lenv* e, lval* a);
 
 #define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
 
