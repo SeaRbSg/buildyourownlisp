@@ -60,6 +60,7 @@ lval* lval_take(lval* v, int i);
 lval* builtin_op(lenv* e, lval* a, char* op);
 lval* lval_eval(lenv* e, lval* v);
 lval* lval_eval_sexpr(lenv* e, lval* y);
+lval* lval_call(lenv* e, lval* f, lval* a);
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func);
 void lenv_add_builtins(lenv* e);
 lval* builtin_add(lenv* e, lval* a);

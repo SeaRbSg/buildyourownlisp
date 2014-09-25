@@ -444,15 +444,51 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
   // ensure first element is a function after evaluation
   lval* f = lval_pop(v, 0);
   if (f->type != LVAL_FUN) {
+    lval* err = lval_err("s-expression starts with wrong type. Got %s, expected %s.", ltype_name(f->type), ltype_name(LVAL_FUN));
     lval_del(f);
     lval_del(v);
-    return lval_err("first element is not a function");
+
+    return err;
   }
 
   // call function
-  lval* result = f->builtin(e, v);
+  lval* result = lval_call(e, f, v);
   lval_del(f);
   return result;
+}
+
+lval* lval_call(lenv* e, lval* f, lval* a) {
+  // if builtin, just call that
+  if (f->builtin) {
+    return f->builtin(e, a);
+  }
+
+  // record arg counts
+  int given = a->count;
+  int total = f->formals->count;
+
+  while(a->count) {
+    if (f->formals->count == 0) {
+      lval_del(a);
+      return lval_err("Function passed too many arguments. Got %i, expected %i.", given, total);
+    }
+
+    lval* sym = lval_pop(f->formals, 0);
+    lval* val = lval_pop(a, 0);
+
+    lenv_put(f->env, sym, val);
+    lval_del(sym);
+    lval_del(val);
+  }
+
+  lval_del(a);
+
+  if (f->formals->count == 0) {
+    f->env->par = e;
+    return builtin_eval(f->env, lval_add(lval_sexpr(), lval_copy(f->body)));
+  } else {
+    return lval_copy(f);
+  }
 }
 
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
@@ -480,6 +516,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "init", builtin_init);
   lenv_add_builtin(e, "def", builtin_def);
   lenv_add_builtin(e, "=", builtin_put);
+  lenv_add_builtin(e, "\\", builtin_lambda);
 }
 
 lval* builtin_add(lenv* e, lval* a) {
@@ -530,8 +567,8 @@ lval* builtin_list(lenv* e, lval* a) {
 }
 
 lval* builtin_eval(lenv* e, lval* a) {
-  LASSERT_NUM_ARGS(a, "tail", a->count, 1);
-  LASSERT_TYPE(a, "tail", a->cell[0]->type, LVAL_QEXPR);
+  LASSERT_NUM_ARGS(a, "eval", a->count, 1);
+  LASSERT_TYPE(a, "eval", a->cell[0]->type, LVAL_QEXPR);
 
   lval* x = lval_take(a, 0);
   x->type = LVAL_SEXPR;
