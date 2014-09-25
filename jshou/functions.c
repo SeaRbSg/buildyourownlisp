@@ -567,9 +567,6 @@ lval* builtin_div(lenv* e, lval* a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
-  if (a->count != 1) {
-    return a;
-  }
   LASSERT_NUM_ARGS(a, "head", a->count, 1);
   LASSERT_TYPE(a, "head", a->cell[0]->type, LVAL_QEXPR);
   LASSERT(a, a->cell[0]->count != 0, "Function 'head' passed {}");
