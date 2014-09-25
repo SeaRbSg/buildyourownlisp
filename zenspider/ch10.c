@@ -10,6 +10,16 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR };
 #define LERR_BAD_NUM  "Invalid number"
 #define LERR_BAD_SEXP "S-expression doesn't start with a symbol"
 #define LERR_NON_NUMBER "Cannot operate on non-number"
+#define LERR_HEAD_ARITY     "Function 'head' passed too many args"
+#define LERR_HEAD_TYPE      "Function 'head' passed incorrect types"
+#define LERR_HEAD_EMPTY     "Function 'head' passed empty list"
+#define LERR_TAIL_ARITY     "Function 'tail' passed too many args"
+#define LERR_TAIL_TYPE      "Function 'tail' passed incorrect types"
+#define LERR_TAIL_EMPTY     "Function 'tail' passed empty list"
+#define LERR_JOIN_TYPE      "Function 'join' passed incorrect type"
+#define LERR_BUILTIN_LOOKUP "Unknown function"
+#define LERR_EVAL_ARITY     "Function 'eval' passed too many arguments"
+#define LERR_EVAL_TYPE      "Function 'eval' passed incorrect type"
 
 typedef struct sexp {
   int count;
@@ -38,7 +48,7 @@ typedef struct lval {
 #define L_TYPE_N(lval, n) L_CELL_N(lval, n)->type
 #define L_COUNT_N(lval, n) L_COUNT(L_CELL_N(lval, n))
 
-#define RETURN_ERR(s, msg) lval_del(s); return lval_err(msg)
+#define RETURN_ERR(s, msg) if (1) { lval_del(s); return lval_err(msg); }
 
 #define LOOKUP(a, b) strcmp((a), (b)) == 0
 #define SUBSTR(a, b) strstr((a), (b))
@@ -60,8 +70,16 @@ void lval_print(lval *v);
 void lval_println(lval *v);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
+lval *builtin_op(lval *a, char *op);
+lval *builtin_head(lval *a);
+lval *builtin_tail(lval *a);
+lval *builtin_list(lval *a);
+lval *builtin_join(lval *a);
+lval *builtin_eval(lval *a);
+lval *lval_join(lval *x, lval *y);
 lval *lval_eval_sexp(lval *v);
 lval *lval_eval(lval *v);
+long count_leaves(mpc_ast_t *t);
 int main(void);
 
 lval* lval_num(long x) {
@@ -293,6 +311,85 @@ lval* builtin_op(lval* a, char* op) {
   return x;
 }
 
+lval* builtin(lval* a, char* func) {
+  if (LOOKUP("list", func)) return builtin_list(a);
+  if (LOOKUP("head", func)) return builtin_head(a);
+  if (LOOKUP("tail", func)) return builtin_tail(a);
+  if (LOOKUP("join", func)) return builtin_join(a);
+  if (LOOKUP("eval", func)) return builtin_eval(a);
+  if (SUBSTR("+-/*", func)) return builtin_op(a, func);
+
+  RETURN_ERR(a, LERR_BUILTIN_LOOKUP);
+}
+
+lval* builtin_head(lval* a) {
+  if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_HEAD_ARITY);
+  if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_HEAD_TYPE);
+  if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_HEAD_EMPTY);
+
+  lval* v = lval_take(a, 0);
+
+  while(L_COUNT(v) > 1) { // WTF? this seems REALLY bad!
+    lval_del(lval_pop(v, 1));
+  }
+
+  return v;
+}
+
+lval* builtin_tail(lval* a) {
+  if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_TAIL_ARITY);
+  if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_TAIL_TYPE);
+  if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_TAIL_EMPTY);
+
+  lval* v = lval_take(a, 0);
+
+  lval_del(lval_pop(v, 0)); // WTF? This seems really bad!
+
+  return v;
+}
+
+lval* builtin_list(lval* a) {
+  L_TYPE(a) = LVAL_QEXP; // TODO: these are all mutating lval. HORRIBLE.
+
+  return a;
+}
+
+lval* builtin_join(lval* a) {
+  for (int i = 0; i < L_COUNT(a); i++) {
+    if (L_TYPE_N(a, i) != LVAL_QEXP) RETURN_ERR(a, LERR_JOIN_TYPE);
+  }
+
+  lval* x = lval_pop(a, 0);
+
+  while (L_COUNT(a)) {
+    x = lval_join(x, lval_pop(a, 0));
+  }
+
+  lval_del(a);
+
+  return x;
+}
+
+lval* builtin_eval(lval* a) {
+  if (L_COUNT(a) != 1)             RETURN_ERR(a, LERR_EVAL_ARITY);
+  if (L_TYPE_N(a, 0) != LVAL_QEXP) RETURN_ERR(a, LERR_EVAL_TYPE);
+
+  lval* x = lval_take(a, 0);
+  L_TYPE(x) = LVAL_SEXP; // TODO: ARGH
+
+  return lval_eval(x);
+}
+
+lval* lval_join(lval* x, lval* y) {
+  while (L_COUNT(y)) {
+    x = lval_add(x, lval_pop(y, 0));
+  }
+
+  lval_del(y);
+
+  return x;
+}
+
 lval* lval_eval_sexp(lval* v) {
   for (int i = 0; i < L_COUNT(v); i++) {
     L_CELL_N(v, i) = lval_eval(L_CELL_N(v, i));
@@ -319,7 +416,7 @@ lval* lval_eval_sexp(lval* v) {
     RETURN_ERR(v, LERR_BAD_SEXP);
   }
 
-  lval* result = builtin_op(v, L_SYM(f));
+  lval* result = builtin(v, L_SYM(f));
   lval_del(f);
   return result;
 }
