@@ -69,9 +69,15 @@ void lenv_put(lenv* e, lval* k, lval* v) {
 lval* lval_abstract() {
   lval* lv = malloc(sizeof(lval));
   lv->type = -1;
+
   lv->num = 0;
   lv->err = NULL;
   lv->sym = NULL;
+
+  lv->builtin = NULL;
+  lv->lenv = NULL;
+  lv->formulas = NULL;
+  lv->body = NULL;
 
   lv->count = 0;
   lv->cell = NULL;
