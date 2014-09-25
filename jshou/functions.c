@@ -75,8 +75,8 @@ lval* lval_abstract() {
   lv->sym = NULL;
 
   lv->builtin = NULL;
-  lv->lenv = NULL;
-  lv->formulas = NULL;
+  lv->env = NULL;
+  lv->formals = NULL;
   lv->body = NULL;
 
   lv->count = 0;
@@ -132,6 +132,18 @@ lval* lval_builtin_function(lbuiltin builtin) {
   lval* v = lval_abstract();
   v->type = LVAL_FUN;
   v->builtin = builtin;
+  return v;
+}
+
+lval* lval_lambda(lval* formals, lval* body) {
+  lval* v = lval_abstract();
+  v->type = LVAL_FUN;
+
+  v->env = lenv_new(); // build new env
+
+  v->formals = formals;
+  v->body = body; // set formals and body
+
   return v;
 }
 

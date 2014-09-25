@@ -14,8 +14,8 @@ struct lval {
 
   // function
   lbuiltin builtin;
-  lenv* lenv;
-  lval* formulas;
+  lenv* env;
+  lval* formals;
   lval* body;
 
   // expression
