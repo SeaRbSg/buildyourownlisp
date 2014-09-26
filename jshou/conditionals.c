@@ -7,6 +7,7 @@ char* ltype_name(int t) {
   switch(t) {
     case LVAL_FUN: return "Function";
     case LVAL_NUM: return "Number";
+    case LVAL_BOOL: return "Boolean";
     case LVAL_ERR: return "Error";
     case LVAL_SYM: return "Symbol";
     case LVAL_SEXPR: return "S-Expression";
@@ -122,6 +123,13 @@ lval* lval_num(long x) {
   lv->num = x;
 
   return lv;
+}
+
+lval* lval_bool(int x) {
+  lval* v = lval_abstract();
+  v->type = LVAL_BOOL;
+  v->num = (x != 0); // x is 1 or 0
+  return v;
 }
 
 lval* lval_err(char* fmt, ...) {
@@ -261,6 +269,7 @@ lval* lval_copy(lval* v) {
         x->body = lval_copy(v->body);
       }
       break;
+    case LVAL_BOOL:
     case LVAL_NUM:
       x->num = v->num;
       break;
@@ -301,6 +310,9 @@ void lval_print(lval* v) {
   switch(v->type) {
     case LVAL_NUM:
       printf("%li", v->num);
+      break;
+    case LVAL_BOOL:
+      printf(v->num ? "true" : "false");
       break;
     case LVAL_ERR:
       printf("Error: %s", v->err);
@@ -532,6 +544,14 @@ void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
   lval_del(v);
 }
 
+void lenv_add_builtin_constant(lenv* e, char* name, lval* val) {
+  lval* k = lval_sym(name);
+  lenv_put(e, k, val);
+
+  lval_del(k);
+  lval_del(val);
+}
+
 void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "+", builtin_add);
   lenv_add_builtin(e, "-", builtin_sub);
@@ -555,6 +575,8 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "==", builtin_eq);
   lenv_add_builtin(e, "!=", builtin_ne);
   lenv_add_builtin(e, "if", builtin_if);
+  lenv_add_builtin_constant(e, "true", lval_bool(1));
+  lenv_add_builtin_constant(e, "false", lval_bool(0));
 }
 
 lval* builtin_add(lenv* e, lval* a) {
@@ -762,7 +784,7 @@ lval* builtin_ord(lenv* e, lval* a, char* op) {
   }
 
   lval_del(a);
-  return lval_num(r);
+  return lval_bool(r);
 }
 
 lval* builtin_gt(lenv* e, lval* a) {
@@ -833,7 +855,7 @@ lval* builtin_cmp(lenv* e, lval* a, char* op) {
 
   lval_del(a);
 
-  return lval_num(result);
+  return lval_bool(result);
 }
 
 lval* builtin_eq(lenv* e, lval* a) {
@@ -846,7 +868,7 @@ lval* builtin_ne(lenv* e, lval* a) {
 
 lval* builtin_if(lenv* e, lval* a) {
   LASSERT_NUM_ARGS(a, "if", a->count, 3);
-  LASSERT_TYPE(a, "if", a->cell[0]->type, LVAL_NUM);
+  LASSERT_TYPE(a, "if", a->cell[0]->type, LVAL_BOOL);
   LASSERT_TYPE(a, "if", a->cell[1]->type, LVAL_QEXPR);
   LASSERT_TYPE(a, "if", a->cell[2]->type, LVAL_QEXPR);
 
