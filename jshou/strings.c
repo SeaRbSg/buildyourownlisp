@@ -10,6 +10,7 @@ char* ltype_name(int t) {
     case LVAL_BOOL: return "Boolean";
     case LVAL_ERR: return "Error";
     case LVAL_SYM: return "Symbol";
+    case LVAL_STR: return "String";
     case LVAL_SEXPR: return "S-Expression";
     case LVAL_QEXPR: return "Q-Expression";
     default: return "Unknown";
@@ -106,6 +107,7 @@ lval* lval_abstract() {
   lv->num = 0;
   lv->err = NULL;
   lv->sym = NULL;
+  lv->str = NULL;
 
   lv->builtin = NULL;
   lv->env = NULL;
@@ -156,6 +158,15 @@ lval* lval_sym(char* s) {
   return v;
 }
 
+lval* lval_str(char* s) {
+  lval* v = lval_abstract();
+  v->type = LVAL_STR;
+  v->str = malloc(strlen(s) + 1);
+  strcpy(v->str, s);
+
+  return v;
+}
+
 lval* lval_sexpr(void) {
   lval* v = lval_abstract();
   v->type = LVAL_SEXPR;
@@ -196,6 +207,9 @@ void lval_del(lval* v) {
       break;
     case LVAL_SYM:
       free(v->sym);
+      break;
+    case LVAL_STR:
+      free(v->str);
       break;
     case LVAL_FUN:
       if (!v->builtin) {
@@ -281,6 +295,10 @@ lval* lval_copy(lval* v) {
       x->sym = malloc(strlen(v->sym) + 1);
       strcpy(x->sym, v->sym);
       break;
+    case LVAL_STR:
+      x->str = malloc(strlen(v->str) + 1);
+      strcpy(x->str, v->str);
+      break;
     case LVAL_SEXPR:
     case LVAL_QEXPR:
       x->count = v->count;
@@ -306,6 +324,16 @@ void lval_expr_print(lval* v, char open, char close) {
   putchar(close);
 }
 
+void lval_print_str(lval* v) {
+  char* escaped = malloc(strlen(v->str) + 1);
+  strcpy(escaped, v->str);
+
+  escaped = mpcf_escape(escaped);
+  printf("\"%s\"", escaped);
+
+  free(escaped);
+}
+
 void lval_print(lval* v) {
   switch(v->type) {
     case LVAL_NUM:
@@ -319,6 +347,9 @@ void lval_print(lval* v) {
       break;
     case LVAL_SYM:
       printf("%s", v->sym);
+      break;
+    case LVAL_STR:
+      lval_print_str(v);
       break;
     case LVAL_FUN:
       if (v->builtin) {
@@ -812,9 +843,11 @@ int lval_eq(lval* a, lval* b) {
     case LVAL_NUM:
       return a->num == b->num;
     case LVAL_ERR:
-      return strcmp(a->err, b->err);
+      return !strcmp(a->err, b->err);
     case LVAL_SYM:
-      return strcmp(a->sym, b->sym);
+      return !strcmp(a->sym, b->sym);
+    case LVAL_STR:
+      return !strcmp(a->str, b->str);
     case LVAL_FUN:
       if (a->builtin) {
         return a->builtin == b->builtin;

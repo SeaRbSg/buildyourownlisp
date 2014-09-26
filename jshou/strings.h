@@ -11,6 +11,7 @@ struct lval {
   long num;
   char* err;
   char* sym;
+  char* str;
 
   // function
   lbuiltin builtin;
@@ -30,7 +31,7 @@ struct lenv {
   lval** vals;
 };
 
-enum { LVAL_NUM, LVAL_BOOL, LVAL_ERR, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR }; // lval_types
+enum { LVAL_NUM, LVAL_BOOL, LVAL_ERR, LVAL_SYM, LVAL_STR, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR }; // lval_types
 
 char* ltype_name(int t);
 lenv* lenv_new(void);
@@ -44,6 +45,7 @@ lval* lval_num(long x);
 lval* lval_bool(int x);
 lval* lval_err(char* fmt, ...);
 lval* lval_sym(char* x);
+lval* lval_str(char* s);
 lval* lval_sexpr(void);
 lval* lval_qepxr(void);
 lval* lval_builtin_function(lbuiltin builtin);
@@ -54,6 +56,7 @@ lval* lval_read_num(mpc_ast_t* t);
 lval* lval_read(mpc_ast_t* t);
 lval* lval_copy(lval* v);
 void lval_expr_print(lval* v, char open, char close);
+void lval_print_str(lval* v);
 void lval_print(lval* v);
 void lval_println(lval* v);
 lval* lval_pop(lval* v, int i);
