@@ -243,12 +243,27 @@ lval* lval_read_num(mpc_ast_t* t) {
   return errno != ERANGE ? lval_num(x) : lval_err("invalid number");
 }
 
+lval* lval_read_str(mpc_ast_t* t) {
+  t->contents[strlen(t->contents) - 1] = '\0'; // cut off final " character
+  char* unescaped = malloc(strlen(t->contents + 1) + 1); // everything but the first " char
+  strcpy(unescaped, t->contents+1);
+
+  unescaped = mpcf_unescape(unescaped);
+  lval* str = lval_str(unescaped);
+  free(unescaped);
+
+  return str;
+}
+
 lval* lval_read(mpc_ast_t* t) {
   if (strstr(t->tag, "number")) {
     return lval_read_num(t);
   }
   if (strstr(t->tag, "symbol")) {
     return lval_sym(t->contents);
+  }
+  if (strstr(t->tag, "string")) {
+    return lval_read_str(t);
   }
 
   lval* x = NULL;
@@ -927,6 +942,7 @@ int main(int argc, char** argv) {
 
   mpc_parser_t* Number = mpc_new("number");
   mpc_parser_t* Symbol = mpc_new("symbol");
+  mpc_parser_t* String = mpc_new("string");
   mpc_parser_t* Sexpr = mpc_new("sexpr");
   mpc_parser_t* Qexpr = mpc_new("qexpr");
   mpc_parser_t* Expr = mpc_new("expr");
@@ -936,11 +952,12 @@ int main(int argc, char** argv) {
       "                                                     \
       number   : /-?[0-9]+/ ;                               \
       symbol : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ;           \
+      string : /\"(\\\\.|[^\"])*\"/ ;                       \
       sexpr : '(' <expr>* ')' ;                             \
       qexpr : '{' <expr>* '}' ;                             \
       expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
       joshlisp    : /^/ <expr>* /$/ ;                       \
-      ", Number, Symbol, Sexpr, Qexpr, Expr, JoshLisp);
+      ", Number, Symbol, String, Sexpr, Qexpr, Expr, JoshLisp);
 
   printf("JoshLisp Version 0.0.0.0.3\n");
 
@@ -969,6 +986,6 @@ int main(int argc, char** argv) {
   }
 
   lenv_del(e);
-  mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, JoshLisp);
+  mpc_cleanup(6, Number, Symbol, String, Sexpr, Qexpr, Expr, JoshLisp);
   return 0;
 }
