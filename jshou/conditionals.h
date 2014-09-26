@@ -80,6 +80,11 @@ lval* builtin_var(lenv* e, lval* a, char* func);
 lval* builtin_def(lenv* e, lval* a);
 lval* builtin_put(lenv* e, lval* a);
 lval* builtin_lambda(lenv* e, lval* a);
+lval* builtin_ord(lenv* e, lval* a, char* op);
+lval* builtin_gt(lenv* e, lval* a);
+lval* builtin_gte(lenv* e, lval* a);
+lval* builtin_lt(lenv* e, lval* a);
+lval* builtin_lte(lenv* e, lval* a);
 
 #define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
 
