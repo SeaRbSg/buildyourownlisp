@@ -8,6 +8,7 @@ all: \
 	variables \
 	functions \
   conditionals \
+  strings \
 	$(NULL)
 
 %: %.c mpc.c
