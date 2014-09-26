@@ -554,6 +554,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "<=", builtin_lte);
   lenv_add_builtin(e, "==", builtin_eq);
   lenv_add_builtin(e, "!=", builtin_ne);
+  lenv_add_builtin(e, "if", builtin_if);
 }
 
 lval* builtin_add(lenv* e, lval* a) {
@@ -841,6 +842,30 @@ lval* builtin_eq(lenv* e, lval* a) {
 
 lval* builtin_ne(lenv* e, lval* a) {
   return builtin_cmp(e, a, "!=");
+}
+
+lval* builtin_if(lenv* e, lval* a) {
+  LASSERT_NUM_ARGS(a, "if", a->count, 3);
+  LASSERT_TYPE(a, "if", a->cell[0]->type, LVAL_NUM);
+  LASSERT_TYPE(a, "if", a->cell[1]->type, LVAL_QEXPR);
+  LASSERT_TYPE(a, "if", a->cell[2]->type, LVAL_QEXPR);
+
+  lval* condition = lval_pop(a, 0);
+  lval* then_function = lval_pop(a, 0);
+  lval* else_function = lval_pop(a, 0);
+
+  lval* result;
+  if (condition->num) {
+    then_function->type = LVAL_SEXPR;
+    result = lval_eval(e, then_function);
+  } else {
+    else_function->type = LVAL_SEXPR;
+    result = lval_eval(e, else_function);
+  }
+
+  lval_del(a);
+
+  return result;
 }
 
 int main(int argc, char** argv) {

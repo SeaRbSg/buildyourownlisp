@@ -89,6 +89,7 @@ int lval_eq(lval* a, lval* b);
 lval* builtin_cmp(lenv* e, lval* a, char* op);
 lval* builtin_eq(lenv* e, lval* a);
 lval* builtin_ne(lenv* e, lval* a);
+lval* builtin_if(lenv* e, lval* a);
 
 #define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
 
