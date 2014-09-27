@@ -7,8 +7,8 @@ all: \
 	q_expressions \
 	variables \
 	functions \
-  conditionals \
-  strings \
+	conditionals \
+	strings \
 	$(NULL)
 
 %: %.c mpc.c
