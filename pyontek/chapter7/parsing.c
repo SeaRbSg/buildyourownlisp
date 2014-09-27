@@ -43,6 +43,18 @@ long eval_op(long x, char* op, long y) {
 	if (strcmp(op, "/") == 0) {
 			return x / y; 
 	}
+	if (strcmp(op, "%") == 0) {
+			return x % y; 
+	}
+	if (strcmp(op, "^") == 0) {
+			return pow(x, y); 
+	}
+	if (strcmp(op, "min") == 0) {
+			return x < y ? x : y;  
+	}
+	if (strcmp(op, "max") == 0) {
+			return x > y ? x : y;  
+	}
 	return 0;
 }
 
@@ -65,7 +77,11 @@ long eval(mpc_ast_t* t){
 		x = eval_op(x, op, eval(t->children[i]));
 		i++;
 	}
-
+	if(i == 3){
+		// did not increment; no third child; op is negation
+		x = x*-1;
+	}
+	
 	return x;
 
 }
@@ -82,11 +98,11 @@ int main(int argc, char** argv){
 
   // Define parsers
   mpca_lang(MPCA_LANG_DEFAULT,
-     "                                                   \
-     number   : /-?[0-9]+/ ;                             \
-     operator : '+' | '-' | '*' | '/' ;                  \
-     expr     : <number> | '(' <operator> <expr>+ ')' ;  \
-     lispy    : /^/ <operator> <expr>+ /$/ ;             \
+     "                                                  							  \
+     number   : /-?[0-9]+/ ;                             								\
+     operator : '+' | '-' | '*' | '/' | '%' | '^' | \"min\" | \"max\" ;     \
+     expr     : <number> | '(' <operator> <expr>+ ')' ;  								\
+     lispy    : /^/ <operator> <expr>+ /$/ ;             								\
      ",
      Number, Operator, Expr, Lispy);
 
