@@ -621,6 +621,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "==", builtin_eq);
   lenv_add_builtin(e, "!=", builtin_ne);
   lenv_add_builtin(e, "if", builtin_if);
+  lenv_add_builtin(e, "load", builtin_load);
   lenv_add_builtin_constant(e, "true", lval_bool(1));
   lenv_add_builtin_constant(e, "false", lval_bool(0));
 }
@@ -998,30 +999,46 @@ int main(int argc, char** argv) {
       joshlisp    : /^/ <expr>* /$/ ;                       \
       ", Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, JoshLisp);
 
-  printf("JoshLisp Version 0.0.0.0.3\n");
-
   lenv* e = lenv_new();
   lenv_add_builtins(e);
 
-  while (1) {
-    mpc_result_t r;
-    char* input = readline("josh_lisp> ");
-    add_history(input);
+  if (argc == 1) {
+    printf("JoshLisp Version 0.0.0.0.3\n");
 
-    if (!input)
-      break;
+    while (1) {
+      mpc_result_t r;
+      char* input = readline("josh_lisp> ");
+      add_history(input);
 
-    if (mpc_parse("<stdin>", input, JoshLisp, &r)) {
-      mpc_ast_t* ast = r.output;
-      lval* x = lval_eval(e, lval_read(r.output));
-      lval_println(x);
-      mpc_ast_delete(ast);
-    } else {
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
+      if (!input)
+        break;
+
+      if (mpc_parse("<stdin>", input, JoshLisp, &r)) {
+        mpc_ast_t* ast = r.output;
+        lval* x = lval_eval(e, lval_read(r.output));
+        lval_println(x);
+        mpc_ast_delete(ast);
+      } else {
+        mpc_err_print(r.error);
+        mpc_err_delete(r.error);
+      }
+
+      free(input);
     }
+  }
 
-    free(input);
+  if (argc >= 2) {
+    // loop over each filename
+    for (int i = 1; i < argc; i++) {
+      lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
+      lval* x = builtin_load(e, args);
+
+      if (x->type == LVAL_ERR) {
+        lval_println(x);
+      }
+
+      lval_del(x);
+    }
   }
 
   lenv_del(e);
