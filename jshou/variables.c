@@ -501,7 +501,7 @@ lval* builtin_cons(lenv* e, lval* a) {
 
   // make room for another value
   qexp->count++;
-  realloc(qexp->cell, sizeof(lval*) * qexp->count);
+  qexp->cell = realloc(qexp->cell, sizeof(lval*) * qexp->count);
 
   // memmove to move everything over by one
   memmove(&qexp->cell[1], &qexp->cell[0], sizeof(lval*) * (qexp->count-1));
@@ -535,7 +535,7 @@ lval* builtin_init(lenv* e, lval* a) {
   lval_del(qexp->cell[num_children - 1]);
 
   qexp->count--;
-  realloc(qexp->cell, sizeof(lval*) * qexp->count);
+  qexp->cell = realloc(qexp->cell, sizeof(lval*) * qexp->count);
 
   return qexp;
 }
