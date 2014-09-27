@@ -109,6 +109,7 @@ lval* builtin_ne(lenv* e, lval* a);
 lval* builtin_if(lenv* e, lval* a);
 lval* builtin_load(lenv* e, lval* a);
 lval* builtin_print(lenv* e, lval* a);
+lval* builtin_error(lenv* e, lval* a);
 
 #define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
 
