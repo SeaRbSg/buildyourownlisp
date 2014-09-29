@@ -9,6 +9,7 @@
 #define STR_EQ(A,B)   (strcmp(A,B) == 0)
 #define MIN(X,Y)    ((X < Y) ? X : Y)
 #define MAX(X,Y)    ((X > Y) ? X : Y)
+#define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
 
 /* creating enums without typedef feels wrong, so I added them. */
 typedef enum { LVAL_ERR, LVAL_NUM, LVAL_DUB, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR } lval_type_t;
@@ -339,8 +340,96 @@ lval* builtin_op(lval* a, char* op) {
     return x;
 }
 
+lval* builtin_head(lval* a) {
+    LASSERT(a, (a->count == 1), "Function 'head' passed too many arguments!");
+    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'head' passed incorrect type!");
+    LASSERT(a, (a->cell[0]->count != 0), "Function 'head' passed {}!");
+
+    lval* v = lval_take(a, 0);
+    while (v->count > 1) {
+        lval_del(lval_pop(v, 1));
+    }
+
+    return v;
+}
+
+lval* builtin_tail(lval* a) {
+    LASSERT(a, (a->count == 1), "Function 'tail' passed too many arguments!");
+    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'tail' passed incorrect type!");
+    LASSERT(a, (a->cell[0]->count != 0), "Function 'tail' passed {}!");
+
+    lval* v = lval_take(a, 0);
+    lval_del(lval_pop(v, 0));
+    return v;
+}
+
+lval* builtin_list(lval* a) {
+    a->type = LVAL_QEXPR;
+    return a;
+}
+
 // forward dec
 lval* lval_eval(lval* v);
+
+lval* builtin_eval(lval* a) {
+    LASSERT(a, (a->count == 1), "Function 'eval' passed too many arguments!");
+    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'eval' passed incorrect type!");
+
+    lval* x = lval_take(a, 0);
+    x->type = LVAL_SEXPR;
+    return lval_eval(x);
+}
+
+// forward dec
+lval* lval_join(lval* x, lval* y);
+
+lval* builtin_join(lval* a) {
+    for (int i=0; i < a->count; i++) {
+        LASSERT(a, (a->cell[i]->type == LVAL_QEXPR), "Function 'join' passed incorrect type!");
+    }
+
+    lval* x = lval_pop(a, 0);
+
+    while (a->count) {
+        x = lval_join(x, lval_pop(a, 0));
+    }
+
+    lval_del(a);
+    return x;
+}
+
+lval* lval_join(lval* x, lval* y) {
+    while (y->count) {
+        x = lval_add(x, lval_pop(y, 0));
+    }
+
+    lval_del(y);
+    return x;
+}
+
+lval* builtin(lval* a, char* func) {
+    if STR_EQ("list", func) {
+        return builtin_list(a);
+    }
+    if STR_EQ("head", func) {
+        return builtin_head(a);
+    }
+    if STR_EQ("tail", func) {
+        return builtin_tail(a);
+    }
+    if STR_EQ("join", func) {
+        return builtin_join(a);
+    }
+    if STR_EQ("eval", func) {
+        return builtin_eval(a);
+    }
+    if (strstr("+-/%*", func)) {
+        return builtin_op(a, func);
+    }
+
+    lval_del(a);
+    return lval_err("Unknown Function!");
+}
 
 lval* lval_eval_sexpr(lval* v) {
     // eval children
@@ -373,7 +462,7 @@ lval* lval_eval_sexpr(lval* v) {
         return lval_err("S-expression Does not start with symbol!");
     }
 
-    lval* result = builtin_op(v, f->sym);
+    lval* result = builtin(v, f->sym);
     lval_del(f);
     return result;
 }
@@ -401,7 +490,7 @@ int main(int argc, char** argv) {
             "                                                                  \
             double   : /-?[0-9]+\\.[0-9]+/ ;                                   \
             number   : /-?[0-9]+/ ;                                            \
-            symbol   : '+' | '-' | '*' | '/' | '%' | '^' |  \"min\" | \"max\"; \
+            symbol   : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | '+' | '-' | '*' | '/' | '%' | '^' |  \"min\" | \"max\"; \
             sexpr    : '(' <expr>* ')';                                        \
             qexpr    : '{' <expr>* '}';                                        \
             expr     : <double> | <number> | <symbol> | <sexpr> | <qexpr> ;    \
