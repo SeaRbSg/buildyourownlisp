@@ -407,6 +407,54 @@ lval* lval_join(lval* x, lval* y) {
     return x;
 }
 
+lval* builtin_cons(lval* a) {
+    LASSERT(a, (a->count == 2), "Function 'cons' passed incorrect number of arguments!");
+    LASSERT(a, (a->cell[1]->type == LVAL_QEXPR), "Function 'cons' passed incorrect type!");
+
+    lval* v = lval_qexpr();
+    lval* x = lval_pop(a, 0);
+    lval* y = lval_pop(a, 0);
+
+    v = lval_add(v,x);
+    while (y->count) {
+        v = lval_add(v, lval_pop(y, 0));
+    }
+
+    lval_del(a);
+
+    return v;
+}
+
+lval* builtin_len(lval* a) {
+    LASSERT(a, (a->count == 1), "Function 'len' passed incorrect number of arguments!");
+    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'len' passed incorrect type!");
+
+    lval* v = lval_num(0);
+    lval* x = lval_take(a, 0);
+    v->num = x->count;
+
+    while (x->count) {
+        lval_del(lval_pop(x, 0));
+    }
+
+    return v;
+}
+
+/* this name is funky. when I think of init I think of initialize. */
+lval* builtin_init(lval* a) {
+    LASSERT(a, (a->count == 1), "Function 'init' passed incorrect number of arguments!");
+    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'init' passed incorrect type!");
+
+    lval* x = lval_take(a, 0);
+
+    /* if we get an empty list, return an empty list */
+    if (x->count > 0) {
+        lval_del(lval_pop(x, x->count-1));
+    }
+
+    return x;
+}
+
 lval* builtin(lval* a, char* func) {
     if STR_EQ("list", func) {
         return builtin_list(a);
@@ -419,6 +467,15 @@ lval* builtin(lval* a, char* func) {
     }
     if STR_EQ("join", func) {
         return builtin_join(a);
+    }
+    if STR_EQ("cons", func) {
+        return builtin_cons(a);
+    }
+    if STR_EQ("init", func) {
+        return builtin_init(a);
+    }
+    if STR_EQ("len", func) {
+        return builtin_len(a);
     }
     if STR_EQ("eval", func) {
         return builtin_eval(a);
@@ -490,7 +547,7 @@ int main(int argc, char** argv) {
             "                                                                  \
             double   : /-?[0-9]+\\.[0-9]+/ ;                                   \
             number   : /-?[0-9]+/ ;                                            \
-            symbol   : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | '+' | '-' | '*' | '/' | '%' | '^' |  \"min\" | \"max\"; \
+            symbol   : \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | \"len\" | \"init\" | '+' | '-' | '*' | '/' | '%' | '^' |  \"min\" | \"max\"; \
             sexpr    : '(' <expr>* ')';                                        \
             qexpr    : '{' <expr>* '}';                                        \
             expr     : <double> | <number> | <symbol> | <sexpr> | <qexpr> ;    \
