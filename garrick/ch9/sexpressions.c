@@ -254,6 +254,7 @@ int main(int argc, char** argv) {
   while(1) {
       /* output our prompt and get input */ 
       char* input = readline("lithp> ");
+      if (!input) break;
       /* add to our history */
       add_history(input);
       /* Attempt to parse the user input */
