@@ -480,7 +480,8 @@ lval* builtin(lval* a, char* func) {
     if STR_EQ("eval", func) {
         return builtin_eval(a);
     }
-    if (strstr("+-/%*", func)) {
+    // allow for min/max. kind of a hack but hoping to clean up in next chapter
+    if (strstr("+-/%*^", func) || STR_EQ("min", func) || STR_EQ("max", func)) {
         return builtin_op(a, func);
     }
 
