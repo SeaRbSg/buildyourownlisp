@@ -20,6 +20,8 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR };
 #define LERR_BUILTIN_LOOKUP "Unknown function"
 #define LERR_EVAL_ARITY     "Function 'eval' passed too many arguments"
 #define LERR_EVAL_TYPE      "Function 'eval' passed incorrect type"
+#define LERR_CONS_ARITY     "Function 'cons' passed wrong number of arguments"
+#define LERR_CONS_TYPE      "Function 'cons' passed incorrect type on tail"
 
 typedef struct sexp {
   int count;
@@ -66,6 +68,7 @@ void lval_print(lval *v);
 void lval_println(lval *v);
 lval *lval_eval(lval *v);
 lval *lval_add(lval *v, lval *x);
+lval *lval_cons(lval *x, lval *s);
 void lval_del(lval *v);
 lval *lval_read_num(mpc_ast_t *t);
 lval *lval_read(mpc_ast_t *t);
@@ -75,6 +78,7 @@ lval *lval_take(lval *v, int i);
 lval *builtin_op(lval *a, char *op);
 lval *builtin(lval *a, char *func);
 lval *builtin_head(lval *a);
+lval *builtin_cons(lval *a);
 lval *builtin_tail(lval *a);
 lval *builtin_list(lval *a);
 lval *builtin_join(lval *a);
@@ -167,6 +171,15 @@ lval* lval_add(lval* v, lval *x) {
   L_CELL(v) = realloc(L_CELL(v), sizeof(lval*) * L_COUNT(v));
   L_CELL_N(v, L_COUNT(v) - 1) = x;
   return v;
+}
+
+lval* lval_cons(lval* x, lval *s) {
+  size_t size = L_COUNT(s);
+  L_COUNT(s)++;
+  L_CELL(s) = realloc(L_CELL(s), size+1);
+  memmove(&L_CELL_N(s, 1), &L_CELL_N(s, 0), sizeof(lval*) * size);
+  L_CELL_N(s, 0) = x;
+  return s;
 }
 
 void lval_del(lval* v) {
@@ -322,6 +335,7 @@ lval* builtin(lval* a, char* func) {
   if (LOOKUP("tail", func)) return builtin_tail(a);
   if (LOOKUP("join", func)) return builtin_join(a);
   if (LOOKUP("eval", func)) return builtin_eval(a);
+  if (LOOKUP("cons", func)) return builtin_cons(a);
   if (SUBSTR("+-/*", func)) return builtin_op(a, func);
 
   RETURN_ERR(a, LERR_BUILTIN_LOOKUP);
@@ -339,6 +353,16 @@ lval* builtin_head(lval* a) {
   }
 
   return v;
+}
+
+lval* builtin_cons(lval* a) {
+  if (L_COUNT(a) != 2)              RETURN_ERR(a, LERR_CONS_ARITY);
+  if (L_TYPE_N(a, 1) != LVAL_QEXP)  RETURN_ERR(a, LERR_CONS_TYPE);
+
+  lval* x = lval_pop(a, 0);
+  lval* s = lval_pop(a, 0);
+
+  return lval_cons(x, s);
 }
 
 lval* builtin_tail(lval* a) {
