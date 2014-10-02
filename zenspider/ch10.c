@@ -5,11 +5,11 @@
 
 enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR };
 
-#define LERR_DIV_ZERO "Division by zero"
-#define LERR_BAD_OP   "Invalid operator"
-#define LERR_BAD_NUM  "Invalid number"
-#define LERR_BAD_SEXP "S-expression doesn't start with a symbol"
-#define LERR_NON_NUMBER "Cannot operate on non-number"
+#define LERR_DIV_ZERO       "Division by zero"
+#define LERR_BAD_OP         "Invalid operator"
+#define LERR_BAD_NUM        "Invalid number"
+#define LERR_BAD_SEXP       "S-expression doesn't start with a symbol"
+#define LERR_NON_NUMBER     "Cannot operate on non-number"
 #define LERR_HEAD_ARITY     "Function 'head' passed too many args"
 #define LERR_HEAD_TYPE      "Function 'head' passed incorrect types"
 #define LERR_HEAD_EMPTY     "Function 'head' passed empty list"
@@ -476,4 +476,6 @@ int main() {
   }
 
   mpc_cleanup(6, Number, Symbol, Sexp, Qexp, Expr, Lispy);
+
+  return 0;
 }

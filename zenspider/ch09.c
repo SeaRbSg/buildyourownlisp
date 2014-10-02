@@ -345,4 +345,6 @@ int main() {
   }
 
   mpc_cleanup(5, Number, Symbol, Sexp, Expr, Lispy);
+
+  return 0;
 }
