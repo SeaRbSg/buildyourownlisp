@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 
-enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR };
+enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
 
 #define LERR_DIV_ZERO       "Division by zero"
 #define LERR_BAD_OP         "Invalid operator"
@@ -23,6 +23,10 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR };
 #define LERR_CONS_ARITY     "Function 'cons' passed wrong number of arguments"
 #define LERR_CONS_TYPE      "Function 'cons' passed incorrect type on tail"
 
+struct lval;
+struct lenv;
+typedef struct lval*(lbuiltin)(struct lenv*, struct lval*);
+
 typedef struct sexp {
   int count;
   struct lval** cell;
@@ -35,12 +39,18 @@ typedef struct lval {
     char* err;
     char* sym;
     sexp sexp;
+    lbuiltin* fun;
   } v;
 } lval;
+
+typedef struct lenv {
+  int i;
+} lenv;
 
 #define L_COUNT(lval)     (lval)->v.sexp.count
 #define L_CELL(lval)      (lval)->v.sexp.cell
 #define L_TYPE(lval)      (lval)->type
+#define L_FUN(lval)       (lval)->v.fun
 #define L_NUM(lval)       (lval)->v.num
 #define L_ERR(lval)       (lval)->v.err
 #define L_SYM(lval)       (lval)->v.sym
@@ -111,6 +121,13 @@ lval* lval_err(char* m) {
   return v;
 }
 
+lval* lval_fun(lbuiltin* func) {
+  lval* v = lval_new();
+  L_TYPE(v) = LVAL_FUN;
+  L_FUN(v) = func;
+  return v;
+}
+
 lval* lval_sym(char* s) {
   lval* v = lval_err(s);
   L_TYPE(v) = LVAL_SYM;
@@ -135,6 +152,9 @@ void lval_print(lval* v) {
   switch (L_TYPE(v)) {
   case LVAL_NUM:
     printf("%li", L_NUM(v));
+    break;
+  case LVAL_FUN:
+    printf("<function>");
     break;
   case LVAL_SYM:
     printf("%s", L_SYM(v));
@@ -186,6 +206,7 @@ lval* lval_cons(lval* x, lval *s) {
 void lval_del(lval* v) {
   switch (L_TYPE(v)) {
   case LVAL_NUM:
+  case LVAL_FUN:
     break;
   case LVAL_SYM:
     free(L_SYM(v));
@@ -481,7 +502,7 @@ int main() {
 
   mpca_lang(MPCA_LANG_DEFAULT, "                                \
             number   : /-?[0-9]+(\\.[0-9]+)?/;                  \
-            symbol   : '+' | '-' | '*' | '/' | '%' | '^' | /[a-zA-Z][a-zA-Z0-9-]*/; \
+            symbol   : /[a-zA-Z0-9_+*\\/\\\\=<>!&-]+/;           \
             sexp     : '(' <expr>* ')';                         \
             qexp     : '{' <expr>* '}';                         \
             expr     : <number> | <symbol> | <sexp> | <qexp>;   \
