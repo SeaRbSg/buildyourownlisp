@@ -307,7 +307,7 @@ int main() {
             number   :   /-?[0-9]+/ ;                                         \
             symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ ;  \
             sexpr    : '(' <expr>* ')' ;                                      \
-            expr     : <number> | <symbol> | <expr> ;                         \
+            expr     : <number> | <symbol> | <sexpr> ;                         \
             lispy    : /^/ <expr>* /$/ ;                                      \
             ",
             Number, Symbol, Sexpr, Expr, Lispy);
