@@ -79,6 +79,7 @@ lval *builtin_op(lval *a, char *op);
 lval *builtin(lval *a, char *func);
 lval *builtin_head(lval *a);
 lval *builtin_cons(lval *a);
+lval *builtin_len(lval* a);
 lval *builtin_tail(lval *a);
 lval *builtin_list(lval *a);
 lval *builtin_join(lval *a);
@@ -336,6 +337,7 @@ lval* builtin(lval* a, char* func) {
   if (LOOKUP("join", func)) return builtin_join(a);
   if (LOOKUP("eval", func)) return builtin_eval(a);
   if (LOOKUP("cons", func)) return builtin_cons(a);
+  if (LOOKUP("len",  func)) return builtin_len(a);
   if (SUBSTR("+-/*", func)) return builtin_op(a, func);
 
   RETURN_ERR(a, LERR_BUILTIN_LOOKUP);
@@ -363,6 +365,10 @@ lval* builtin_cons(lval* a) {
   lval* s = lval_pop(a, 0);
 
   return lval_cons(x, s);
+}
+
+lval* builtin_len(lval* a) {
+  return lval_num(L_COUNT_N(a, 0));
 }
 
 lval* builtin_tail(lval* a) {
