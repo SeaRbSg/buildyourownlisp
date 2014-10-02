@@ -33,6 +33,12 @@ lval *lval_read(mpc_ast_t *t);
 void lval_expr_print(lval *v, char open, char close);
 void lval_print(lval *v);
 void lval_println(lval *v);
+lval *lval_eval_sexpr(lval *v);
+lval *lval_eval(lval *v);
+lval *lval_pop(lval *v, int i);
+lval *lval_take(lval *v, int i);
+lval *builtin_op(lval *a, char *op);
+int main(void);
 
 /** Actual Code **/
 
@@ -148,106 +154,191 @@ void lval_println(lval* v) {
   putchar('\n'); 
 }
 
-/* lval eval_op(lval x, char* op, lval y) { */
+lval* lval_eval_sexpr(lval* v) {
 
-/*   if (LVAL_ERR == x.type) {  */
-/*     return x;  */
-/*   } */
-/*   if (LVAL_ERR == y.type) {  */
-/*     return y; */
-/*   } */
+  /* Evaluate Children */
+  for (int i = 0; i < v->count; i++) {
+    v->cell[i] = lval_eval(v->cell[i]);
+  }
 
-/*   if (strcmp(op, "+") == 0) { return lval_num(x.num + y.num); } */
-/*   if (strcmp(op, "-") == 0) { return lval_num(x.num - y.num); } */
-/*   if (strcmp(op, "*") == 0) { return lval_num(x.num * y.num); } */
-/*   if (strcmp(op, "^") == 0) { return lval_num(pow(x.num, y.num)); } */
-/*   if (strcmp(op, "%") == 0) {  */
-/*     return y.num == 0 ? lval_err(LERR_DIV_ZERO) : lval_num(x.num % y.num);  */
-/*   } */
-/*   if (strcmp(op, "/") == 0) {  */
-/*     return y.num == 0 ? lval_err(LERR_DIV_ZERO) : lval_num(x.num / y.num); */
-/*   } */
-/*   if (strcmp(op, "min") == 0) {  */
-/*     return x.num <= y.num ? lval_num(x.num) : lval_num(y.num);  */
-/*   } */
-/*   if (strcmp(op, "max") == 0) {  */
-/*     return x.num >= y.num ? lval_num(x.num) : lval_num(y.num);  */
-/*   } */
+  /* Error Checking */
+  for (int i = 0; i < v->count; i++) {
+    if(v->cell[i]->type == LVAL_ERR) {
+      return lval_take(v, i);
+    }
+  }
 
-/*   return lval_err(LERR_BAD_OP); */
-/* } */
+  /* Empty Expression */
+  if (v->count == 0) { 
+    return v;
+  }
 
-/* lval eval(mpc_ast_t* t) { */
+  /* Single Expression */
+  if (v->count == 1) { 
+    return lval_take(v, 0);
+  }
 
-/*   if (strstr(t->tag, "number")) {  */
-/*     /\* Check if there is some error in conversion *\/ */
-/*     errno = 0; */
-/*     long x = strtol(t->contents, NULL, 10); */
-/*     return errno != ERANGE ? lval_num(x) : lval_err(LERR_BAD_NUM); */
-/*   } */
+  /* Ensure First Element is Symbol */
+  lval* f = lval_pop(v, 0);
+  if (f->type != LVAL_SYM) {
+    lval_del(f); 
+    lval_del(v);
+    return lval_err("S-expression Does not start with symbol!");
+  }
 
-/*   char* op = t->children[1]->contents; */
-/*   lval x = eval(t->children[2]); */
+  /* Call builtin with operator */
+  lval* result = builtin_op(v, f->sym);
+  lval_del(f);
+  return result;
+}
 
-/*   if (t->children_num == 4 && strcmp(op, "-") == 0) { */
-/*     x = lval_num(x.num * -1); */
-/*   } else { */
-/*     /\* Iterate the remaining children, combining using our operator *\/ */
-/*     for (int i = 3; strstr(t->children[i]->tag, "expr"); i++) { */
-/*       x = eval_op(x, op, eval(t->children[i])); */
-/*     } */
-/*   } */
+lval* lval_eval(lval* v) { 
+  /* Evaluate Sexpressions */
+  if (v->type == LVAL_SEXPR) { 
+    return lval_eval_sexpr(v);
+  }
+
+  /* All other lvaltypes remain the same */
+  return v;
+}
+
+lval* lval_pop(lval* v, int i) {
+  /* Find the item at "i" */
+  lval* x = v->cell[i];
+
+  /* Shift the memory following the item at "i" over the top of it */
+  memmove(&v->cell[i], &v->cell[i+1], sizeof(lval*) * (v->count-i-1));
+
+  /* Decrease the count of items in the list */
+  v->count--;
+
+  /* Reallocate the memory used */
+  v->cell = realloc(v->cell, sizeof(lval*) * v->count);
+  return x;
+}
+
+lval* lval_take(lval* v, int i) {
+  lval* x = lval_pop(v, i);
+  lval_del(v);
+  return x;
+}
+
+lval* builtin_op(lval* a, char* op) {
   
-/*   return x; */
-/* } */
+  /* Ensure all arguments are numbers */
+  for (int i = 0; i < a->count; i++) {
+    if (a->cell[i]->type != LVAL_NUM) {
+      lval_del(a);
+      return lval_err("Cannot operate on non-number!");
+    }
+  }
 
-/* int main() { */
-/*   mpc_parser_t* Number   = mpc_new("number"); */
-/*   mpc_parser_t* Symbol   = mpc_new("symbol"); */
-/*   mpc_parser_t* Sexpr    = mpc_new("sexpr"); */
-/*   mpc_parser_t* Expr     = mpc_new("expr"); */
-/*   mpc_parser_t* Lispy    = mpc_new("lispy"); */
+  /* Pop the first element */
+  lval* x = lval_pop(a, 0);
+  
+  /* If no arguments and subtraction: perform unary negation */
+  if ((strcmp(op, "-") == 0) && a->count == 0) {
+    x->num = -x->num; 
+  }
 
-/*   mpca_lang(MPCA_LANG_DEFAULT,  */
-/*             "                                                                 \ */
-/*             number :   /-?[0-9]+(\\.[0-9]+)?/ ;                               \ */
-/*             operator:   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ ;   \ */
-/*             sexpr: '(' <expr>* ')' ;                                          \ */
-/*             expr : <number> | <symbol> | <expr> ;                             \ */
-/*             lispy    : /^/ <expr>* /$/ ;                                      \ */
-/*             ", */
-/*             Number, Symbol, Sexpr, Expr, Lispy); */
+  /* While there are still elements remaining */
+  while (a->count > 0) {
+    
+    /* Pop the next element */
+    lval* y = lval_pop(a, 0);
 
-/*   puts("Lispy Version 0.0.0.0.9"); */
-/*   puts("Press Crtl-c to Exit\n"); */
+    /* Perform operation */
+    if (strcmp(op, "+") == 0) { 
+      x->num += y->num;
+    }
+    if (strcmp(op, "-") == 0) {
+      x->num -= y->num ;
+    }
+    if (strcmp(op, "*") == 0) {
+      x->num *= y->num; 
+    }
+    if (strcmp(op, "^") == 0) { 
+      x->num = pow(x->num, y->num);
+    }
+    if (strcmp(op, "/") == 0) {
+      if (y->num == 0) { 
+        lval_del(x); 
+        lval_del(y);
+        x = lval_err("Division By Zero!");
+        break;
+      }
+      x->num /= y->num;
+    }
+    if (strcmp(op, "%") == 0) {
+      if (y->num == 0) {
+        lval_del(x);
+        lval_del(y);
+        x = lval_err("Division By Zero!");
+        break;
+      }
+      x->num = x->num % y->num;
+    }
+    if (strcmp(op, "min") == 0) { 
+      x->num = x->num <= y->num ? x->num : y->num;
+    }
+    if (strcmp(op, "max") == 0) { 
+      x->num = x->num >= y->num ? x->num : y->num;
+    }
 
-/*   while (1) { */
-/*     char* input = readline("lispy> "); */
-/*     add_history(input); */
+    /* Delete the element now finished with */
+    lval_del(y);
+  }
 
-/*     mpc_result_t r; */
+  /* Delete input expresison and return result */
+  lval_del(a);
 
-/*     if (mpc_parse("<stdin>", input, Lispy, &r)) { */
-/*       mpc_ast_print(r.output); */
-
-/*       lval result = eval(r.output); */
-/*       lval_println(result); */
-/*       mpc_ast_delete(r.output); */
-
-/*     } else { */
-/*       /\* Error *\/ */
-/*       mpc_err_print(r.error); */
-/*       mpc_err_delete(r.error); */
-/*     } */
-
-/*     free(input); */
-/*   } */
-
-/*   mpc_cleanup(5, Number, Symbol, Sexpr, Expr, Lispy); */
-
-/*   return 0; */
-/* } */
+  return x;
+}
 
 int main() {
+  mpc_parser_t* Number   = mpc_new("number");
+  mpc_parser_t* Symbol   = mpc_new("symbol");
+  mpc_parser_t* Sexpr    = mpc_new("sexpr");
+  mpc_parser_t* Expr     = mpc_new("expr");
+  mpc_parser_t* Lispy    = mpc_new("lispy");
+
+  mpca_lang(MPCA_LANG_DEFAULT,
+            "                                                                 \
+            number   :   /-?[0-9]+/ ;                                         \
+            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ ;  \
+            sexpr    : '(' <expr>* ')' ;                                      \
+            expr     : <number> | <symbol> | <expr> ;                         \
+            lispy    : /^/ <expr>* /$/ ;                                      \
+            ",
+            Number, Symbol, Sexpr, Expr, Lispy);
+
+  puts("Lispy Version 0.0.0.0.5");
+  puts("Press Crtl-c to Exit\n");
+
+  while (1) {
+    char* input = readline("lispy> ");
+    add_history(input);
+
+    mpc_result_t r;
+
+    if (mpc_parse("<stdin>", input, Lispy, &r)) {
+      mpc_ast_print(r.output);
+
+      lval* x = lval_eval(lval_read(r.output));
+      lval_println(x);
+      lval_del(x);
+
+      mpc_ast_delete(r.output);
+    } else {
+      /* Error */
+      mpc_err_print(r.error);
+      mpc_err_delete(r.error);
+    }
+
+    free(input);
+  }
+
+  mpc_cleanup(5, Number, Symbol, Sexpr, Expr, Lispy);
+
   return 0;
 }
