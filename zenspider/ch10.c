@@ -55,22 +55,25 @@ typedef struct lval {
 
 // prototypes -- via cproto -- I'm not a masochist.
 
-/* ch09.c */
+/* ch10.c */
+lval *lval_new(void);
 lval *lval_num(long x);
 lval *lval_err(char *m);
 lval *lval_sym(char *s);
 lval *lval_sexp(void);
 lval *lval_qexp(void);
+void lval_print(lval *v);
+void lval_println(lval *v);
+lval *lval_eval(lval *v);
 lval *lval_add(lval *v, lval *x);
 void lval_del(lval *v);
 lval *lval_read_num(mpc_ast_t *t);
 lval *lval_read(mpc_ast_t *t);
 void lval_expr_print(lval *v, char open, char close);
-void lval_print(lval *v);
-void lval_println(lval *v);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
 lval *builtin_op(lval *a, char *op);
+lval *builtin(lval *a, char *func);
 lval *builtin_head(lval *a);
 lval *builtin_tail(lval *a);
 lval *builtin_list(lval *a);
@@ -78,7 +81,6 @@ lval *builtin_join(lval *a);
 lval *builtin_eval(lval *a);
 lval *lval_join(lval *x, lval *y);
 lval *lval_eval_sexp(lval *v);
-lval *lval_eval(lval *v);
 long count_leaves(mpc_ast_t *t);
 int main(void);
 
