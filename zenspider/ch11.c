@@ -159,6 +159,40 @@ lval* lval_sym(char* s) {
   return v;
 }
 
+lval* lval_copy(lval* v) {
+  lval* x = malloc(sizeof(lval));
+  L_TYPE(x) = L_TYPE(v);
+
+  switch (L_TYPE(v)) {
+  case LVAL_FUN:
+    L_FUN(x) = L_FUN(v);
+    break;
+  case LVAL_NUM:
+    L_NUM(x) = L_NUM(v);
+    break;
+  case LVAL_ERR:
+    L_ERR(x) = strdup(L_ERR(v));
+    break;
+  case LVAL_SYM:
+    L_SYM(x) = strdup(L_ERR(v));
+    break;
+  case LVAL_SEXP:
+  case LVAL_QEXP:
+    L_COUNT(x) = L_COUNT(v);
+    L_CELL(x)  = malloc(sizeof(lval*) * L_COUNT(x));
+
+    for (int i = 0; i < L_COUNT(x); ++i) {
+      L_CELL_N(x, i) = lval_copy(L_CELL_N(v, i));
+    }
+    break;
+  default:
+    printf("Unknown lval type: %d", L_TYPE(v));
+    break;
+  }
+
+  return x;
+}
+
 void lval_del(lval* v) {
   switch (L_TYPE(v)) {
   case LVAL_NUM:
