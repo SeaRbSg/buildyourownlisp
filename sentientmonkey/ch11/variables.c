@@ -70,6 +70,7 @@ struct lval {
     char* err;
     char* sym;
     lbuiltin fun;
+    char* fname;
 
     int count;
     lval** cell;
@@ -106,10 +107,12 @@ lval* lval_err(char* fmt, ...) {
     return v;
 }
 
-lval* lval_fun(lbuiltin func) {
+lval* lval_fun(char* s, lbuiltin func) {
     lval* v = malloc(sizeof(lval));
     v->type = LVAL_FUN;
     v->fun = func;
+    v->fname = malloc(strlen(s) + 1);
+    strcpy(v->fname, s);
     return v;
 }
 
@@ -177,6 +180,8 @@ lval* lval_copy(lval* v) {
     switch (v->type) {
         case LVAL_FUN:
             x-> fun = v->fun;
+            x->fname = malloc(strlen(v->fname + 1));
+            strcpy(x->fname, v->fname);
             break;
         case LVAL_NUM:
             x->num = v->num;
@@ -289,7 +294,7 @@ void lval_print(lval* v) {
             printf("Error: %s", v->err);
             break;
         case LVAL_FUN:
-            printf("<function>");
+            printf("<%s>", v->fname);
             break;
         case LVAL_SYM:
             printf("%s", v->sym);
@@ -666,7 +671,7 @@ lval* builtin_def(lenv* e, lval* a) {
 
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
     lval* k = lval_sym(name);
-    lval* v = lval_fun(func);
+    lval* v = lval_fun(name, func);
     lenv_put(e, k, v);
     lval_del(k);
     lval_del(v);
