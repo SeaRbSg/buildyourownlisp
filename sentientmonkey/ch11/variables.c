@@ -11,12 +11,27 @@
 #define STR_EQ(A,B)   (strcmp(A,B) == 0)
 #define MIN(X,Y)    ((X < Y) ? X : Y)
 #define MAX(X,Y)    ((X > Y) ? X : Y)
-#define LASSERT(args, cond, fmt, ...) \
+#define LCHECK(args, cond, fmt, ...) \
     if (!(cond)) {\
         lval* err = lval_err(fmt, ##__VA_ARGS__);\
         lval_del(args);\
         return err;\
     }
+
+#define LCHECK_TYPE(func, arg, t) \
+   LCHECK(arg, (arg->type == t), \
+       "Function '%s' passed incorrect type. Got %s, Expected %s", \
+       func, ltype_name(arg->type), ltype_name(t));
+
+#define LCHECK_COUNT(func, arg, n) \
+   LCHECK(arg, (arg->count == n), \
+       "Function '%s' passed incorrect number of arguments! Got %i, Expected %i.", \
+       func, a->count, n);
+
+#define LCHECK_EMPTY(func, arg) \
+    LCHECK(arg, (arg->count != 0), \
+        "Function '%s' passed {}!", \
+        func);
 
 /* foward declarations */
 struct lval;
@@ -516,11 +531,9 @@ lval* builtin_max(lenv* e, lval* a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 1), "Function 'head' passed too many arguments! Got %i, Expected %i.", a->count, 1);
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
-            "Function 'head' passed incorrect type for argument 0. Got %s, Expected %s",
-            ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
-    LASSERT(a, (a->cell[0]->count != 0), "Function 'head' passed {}!");
+    LCHECK_COUNT("head", a, 1);
+    LCHECK_TYPE("head", a->cell[0], LVAL_QEXPR);
+    LCHECK_EMPTY("head", a->cell[0]);
 
     lval* v = lval_take(a, 0);
     while (v->count > 1) {
@@ -531,9 +544,9 @@ lval* builtin_head(lenv* e, lval* a) {
 }
 
 lval* builtin_tail(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 1), "Function 'tail' passed too many arguments!");
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'tail' passed incorrect type!");
-    LASSERT(a, (a->cell[0]->count != 0), "Function 'tail' passed {}!");
+    LCHECK_COUNT("tail", a, 1);
+    LCHECK_TYPE("tail", a->cell[0], LVAL_QEXPR);
+    LCHECK_EMPTY("tail", a->cell[0]);
 
     lval* v = lval_take(a, 0);
     lval_del(lval_pop(v, 0));
@@ -549,8 +562,8 @@ lval* builtin_list(lenv* e, lval* a) {
 lval* lval_eval(lenv* e, lval* v);
 
 lval* builtin_eval(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 1), "Function 'eval' passed too many arguments!");
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'eval' passed incorrect type!");
+    LCHECK_COUNT("eval", a, 1);
+    LCHECK_TYPE("eval", a->cell[0], LVAL_QEXPR);
 
     lval* x = lval_take(a, 0);
     x->type = LVAL_SEXPR;
@@ -562,7 +575,7 @@ lval* lval_join(lval* x, lval* y);
 
 lval* builtin_join(lenv* e, lval* a) {
     for (int i=0; i < a->count; i++) {
-        LASSERT(a, (a->cell[i]->type == LVAL_QEXPR), "Function 'join' passed incorrect type!");
+        LCHECK_TYPE("join", a->cell[i], LVAL_QEXPR);
     }
 
     lval* x = lval_pop(a, 0);
@@ -585,8 +598,8 @@ lval* lval_join(lval* x, lval* y) {
 }
 
 lval* builtin_cons(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 2), "Function 'cons' passed incorrect number of arguments!");
-    LASSERT(a, (a->cell[1]->type == LVAL_QEXPR), "Function 'cons' passed incorrect type!");
+    LCHECK_COUNT("cons", a, 2);
+    LCHECK_TYPE("cons", a->cell[1], LVAL_QEXPR);
 
     lval* v = lval_qexpr();
     lval* x = lval_pop(a, 0);
@@ -603,8 +616,8 @@ lval* builtin_cons(lenv* e, lval* a) {
 }
 
 lval* builtin_len(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 1), "Function 'len' passed incorrect number of arguments!");
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'len' passed incorrect type!");
+    LCHECK_COUNT("len", a, 1);
+    LCHECK_TYPE("len", a->cell[0], LVAL_QEXPR);
 
     lval* v = lval_num(0);
     lval* x = lval_take(a, 0);
@@ -619,8 +632,8 @@ lval* builtin_len(lenv* e, lval* a) {
 
 /* this name is funky. when I think of init I think of initialize. */
 lval* builtin_init(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 1), "Function 'init' passed incorrect number of arguments!");
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'init' passed incorrect type!");
+    LCHECK_COUNT("init", a, 1);
+    LCHECK_TYPE("init", a->cell[0], LVAL_QEXPR);
 
     lval* x = lval_take(a, 0);
 
@@ -633,15 +646,15 @@ lval* builtin_init(lenv* e, lval* a) {
 }
 
 lval* builtin_def(lenv* e, lval* a) {
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'def' passed incorrect type!");
+    LCHECK_TYPE("def", a->cell[0], LVAL_QEXPR);
 
     lval* syms = a->cell[0];
 
     for (int i=0; i < syms->count; i++) {
-        LASSERT(a, (syms->cell[i]-> type == LVAL_SYM), "Function 'def' cannot define non-symbol!");
+        LCHECK(a, (syms->cell[i]-> type == LVAL_SYM), "Function 'def' cannot define non-symbol!");
     }
 
-    LASSERT(a, (syms->count == a->count-1), "Function 'def' cannot define incorrect number of values to symbols!");
+    LCHECK(a, (syms->count == a->count-1), "Function 'def' cannot define incorrect number of values to symbols!");
 
     for (int i=0; i < syms->count; i++) {
         lenv_put(e, syms->cell[i], a->cell[i+1]);
