@@ -1,0 +1,3 @@
+Who owns the objects uploaded and what user are clients using to download objects?
+Do the signed requests make the clients act like IAM users?
+"The bucket owner can grant permission by using a bucket policy or bucket ACL. Note that, if the AWS account that owns the bucket is also the parent account of an IAM user, then it can configure bucket permissions in a user policy."
