@@ -61,6 +61,7 @@ typedef struct lenv {
 #define L_COUNT_N(lval, n) L_COUNT(L_CELL_N(lval, n))
 
 #define RETURN_ERR(s, msg) if (1) { lval_del(s); return lval_err(msg); }
+#define FOREACH_SEXP(i, e) for (int i = 0, _max = L_COUNT(e); i < _max; ++i)
 
 #define LOOKUP(a, b) strcmp((a), (b)) == 0
 #define SUBSTR(a, b) strstr((a), (b))
@@ -181,7 +182,7 @@ lval* lval_copy(lval* v) {
     L_COUNT(x) = L_COUNT(v);
     L_CELL(x)  = malloc(sizeof(lval*) * L_COUNT(x));
 
-    for (int i = 0; i < L_COUNT(x); ++i) {
+    FOREACH_SEXP(i, x) {
       L_CELL_N(x, i) = lval_copy(L_CELL_N(v, i));
     }
     break;
@@ -203,7 +204,7 @@ void lval_del(lval* v) {
     break;
   case LVAL_SEXP:
   case LVAL_QEXP:
-    for (int i = 0; i < L_COUNT(v); i++) {
+    FOREACH_SEXP(i, v) {
       lval_del(L_CELL_N(v, i));
     }
     free(L_CELL(v));
@@ -280,11 +281,11 @@ lval* lval_eval(lval* v) {
 }
 
 lval* lval_eval_sexp(lval* v) {
-  for (int i = 0; i < L_COUNT(v); i++) {
+  FOREACH_SEXP(i, v) {
     L_CELL_N(v, i) = lval_eval(L_CELL_N(v, i));
   }
 
-  for (int i = 0; i < L_COUNT(v); i++) {
+  FOREACH_SEXP(i, v) {
     if (L_TYPE_N(v, i) == LVAL_ERR) {
       return lval_take(v, i);
     }
@@ -359,7 +360,7 @@ lval* builtin(lval* a, char* func) {
 }
 
 lval* builtin_op(lval* a, char* op) {
-  for (int i = 0; i < L_COUNT(a); i++) {
+  FOREACH_SEXP(i, a) {
     if (L_TYPE_N(a, i) != LVAL_NUM) {
       RETURN_ERR(a, LERR_NON_NUMBER);
     }
@@ -451,7 +452,7 @@ lval* builtin_head(lval* a) {
 }
 
 lval* builtin_join(lval* a) {
-  for (int i = 0; i < L_COUNT(a); i++) {
+  FOREACH_SEXP(i, a) {
     if (L_TYPE_N(a, i) != LVAL_QEXP) RETURN_ERR(a, LERR_JOIN_TYPE);
   }
 
@@ -534,12 +535,10 @@ void lval_print(lval* v) {
 void lval_print_expr(lval* v, char open, char close) {
   putchar(open);
 
-  int max = L_COUNT(v) - 1;
-
-  for (int i = 0; i < L_COUNT(v); i++) {
+  FOREACH_SEXP(i, v) {
     lval_print(L_CELL_N(v, i));
 
-    if (i != max) {
+    if (i != _max) {
       putchar(' ');
     }
   }
