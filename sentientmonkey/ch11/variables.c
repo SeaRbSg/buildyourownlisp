@@ -6,10 +6,17 @@
 #include <editline/readline.h>
 #include "mpc.h"
 
+#define ERR_BUF_SIZE 512
+
 #define STR_EQ(A,B)   (strcmp(A,B) == 0)
 #define MIN(X,Y)    ((X < Y) ? X : Y)
 #define MAX(X,Y)    ((X > Y) ? X : Y)
-#define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
+#define LASSERT(args, cond, fmt, ...) \
+    if (!(cond)) {\
+        lval* err = lval_err(fmt, ##__VA_ARGS__);\
+        lval_del(args);\
+        return err;\
+    }
 
 /* foward declarations */
 struct lval;
@@ -19,6 +26,25 @@ typedef struct lenv lenv;
 
 /* creating enums without typedef feels wrong, so I added them. */
 typedef enum { LVAL_ERR, LVAL_NUM, LVAL_DUB, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR } lval_type_t;
+
+char* ltype_name(lval_type_t t) {
+    switch(t) {
+        case LVAL_FUN:
+            return "Function";
+        case LVAL_NUM:
+            return "Number";
+        case LVAL_ERR:
+            return "Error";
+        case LVAL_SYM:
+            return "Symbol";
+        case LVAL_SEXPR:
+            return "S-Expression";
+        case LVAL_QEXPR:
+            return "Q-Expression";
+        default:
+            return "Unknown";
+    }
+}
 
 typedef lval*(*lbuiltin)(lenv*, lval*);
 
@@ -48,11 +74,20 @@ lval* lval_dub(double x) {
     return v;
 }
 
-lval* lval_err(char* m) {
+lval* lval_err(char* fmt, ...) {
     lval* v = malloc(sizeof(lval));
     v->type = LVAL_ERR;
-    v->err = malloc(strlen(m) + 1);
-    strcpy(v->err, m);
+
+    va_list va;
+    va_start(va, fmt);
+
+    v->err = malloc(ERR_BUF_SIZE);
+    vsnprintf(v->err, ERR_BUF_SIZE-1, fmt, va);
+
+    v->err = realloc(v->err, strlen(v->err)+1);
+
+    va_end(va);
+
     return v;
 }
 
@@ -306,7 +341,7 @@ lval* lenv_get(lenv* e, lval* k) {
             return lval_copy(e->vals[i]);
         }
     }
-    return lval_err("Unbound symbol!");
+    return lval_err("Unbound symbol '%s'!", k->sym);
 }
 
 void lenv_put(lenv* e, lval* k, lval* v) {
@@ -481,8 +516,10 @@ lval* builtin_max(lenv* e, lval* a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
-    LASSERT(a, (a->count == 1), "Function 'head' passed too many arguments!");
-    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'head' passed incorrect type!");
+    LASSERT(a, (a->count == 1), "Function 'head' passed too many arguments! Got %i, Expected %i.", a->count, 1);
+    LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
+            "Function 'head' passed incorrect type for argument 0. Got %s, Expected %s",
+            ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR));
     LASSERT(a, (a->cell[0]->count != 0), "Function 'head' passed {}!");
 
     lval* v = lval_take(a, 0);
