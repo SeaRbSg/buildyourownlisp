@@ -100,21 +100,26 @@ lenv *lenv_new(void);
 void lenv_del(lenv *e);
 lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
+void lenv_println(lenv *e);
 
-lval *lval_eval(lval *v);
-lval *lval_eval_sexp(lval *v);
+lval *lval_eval(lenv *e, lval *v);
+lval *lval_eval_sexp(lenv *e, lval *v);
 lval *lval_read(mpc_ast_t *t);
 lval *lval_read_num(mpc_ast_t *t);
 
-lval *builtin(lval *a, char *func);
-lval *builtin_op(lval *a, char *op);
-lval *builtin_cons(lval *a);
-lval *builtin_eval(lval *a);
-lval *builtin_head(lval *a);
-lval *builtin_join(lval *a);
-lval *builtin_len(lval* a);
-lval *builtin_list(lval *a);
-lval *builtin_tail(lval *a);
+lval *builtin(lenv *e, lval *a, char *func);
+lval *builtin_op(lenv *e, lval *a, char *op);
+lval *builtin_cons(lenv *e, lval *a);
+lval *builtin_eval(lenv *e, lval *a);
+lval *builtin_head(lenv *e, lval *a);
+lval *builtin_join(lenv *e, lval *a);
+lval *builtin_len(lenv *e, lval* a);
+lval *builtin_list(lenv *e, lval *a);
+lval *builtin_tail(lenv *e, lval *a);
+lval *builtin_add(lenv *e, lval *a);
+lval *builtin_sub(lenv *e, lval *a);
+lval *builtin_mul(lenv *e, lval *a);
+lval *builtin_div(lenv *e, lval *a);
 
 long count_leaves(mpc_ast_t *t);
 void lval_print(lval *v);
@@ -331,23 +336,61 @@ void lenv_put(lenv* e, lval* k, lval* v) {
   E_SYM_N(e, E_COUNT(e)-1) = strdup(L_SYM(k));
 }
 
+void lenv_println(lenv *e) {
+  printf("{\n");
+  FOREACH_ENV(i, e) {
+    printf("  %s = ", E_SYM_N(e, i));
+    lval_println(E_VAL_N(e, i));
+  }
+  printf("}\n");
+}
+
+void lenv_add_builtin(lenv *e, char *name, lbuiltin *func) {
+  lval *k = lval_sym(name);
+  lval *v = lval_fun(func);
+
+  lenv_put(e, k, v);
+
+  lval_del(k);
+  lval_del(v);
+}
+
+void lenv_add_builtins(lenv *e) {
+  lenv_add_builtin(e, "list", builtin_list);
+  lenv_add_builtin(e, "head", builtin_head);
+  lenv_add_builtin(e, "tail", builtin_tail);
+  lenv_add_builtin(e, "eval", builtin_eval);
+  lenv_add_builtin(e, "join", builtin_join);
+
+  lenv_add_builtin(e, "+", builtin_add);
+  lenv_add_builtin(e, "-", builtin_sub);
+  lenv_add_builtin(e, "*", builtin_mul);
+  lenv_add_builtin(e, "/", builtin_div);
+}
+
 /*
  * Eval and Read
  */
 
-lval* lval_eval(lval* v) {
+lval* lval_eval(lenv *e, lval* v) {
   switch (L_TYPE(v)) {
   case LVAL_SEXP:
-    return lval_eval_sexp(v);
+    return lval_eval_sexp(e, v);
+    break;
+  case LVAL_SYM: {
+    lval *x = lenv_get(e, v);
+    lval_del(v);
+    return x;
+    }
     break;
   default:
     return v; // all other types evaluate to themselves
   }
 }
 
-lval* lval_eval_sexp(lval* v) {
+lval* lval_eval_sexp(lenv *e, lval* v) {
   FOREACH_SEXP(i, v) {
-    L_CELL_N(v, i) = lval_eval(L_CELL_N(v, i));
+    L_CELL_N(v, i) = lval_eval(e, L_CELL_N(v, i));
   }
 
   FOREACH_SEXP(i, v) {
@@ -366,12 +409,12 @@ lval* lval_eval_sexp(lval* v) {
 
   lval* f = lval_pop(v, 0);
 
-  if (L_TYPE(f) != LVAL_SYM) {
+  if (L_TYPE(f) != LVAL_FUN) {
     lval_del(f);
     RETURN_ERR(v, LERR_BAD_SEXP);
   }
 
-  lval* result = builtin(v, L_SYM(f));
+  lval* result = L_FUN(f)(e, v);
   lval_del(f);
   return result;
 }
@@ -411,22 +454,22 @@ lval* lval_read_num(mpc_ast_t* t) {
  * Builtins
  */
 
-lval* builtin(lval* a, char* func) {
-  if (LOOKUP("list", func)) return builtin_list(a);
-  if (LOOKUP("head", func)) return builtin_head(a);
-  if (LOOKUP("tail", func)) return builtin_tail(a);
-  if (LOOKUP("join", func)) return builtin_join(a);
-  if (LOOKUP("eval", func)) return builtin_eval(a);
-  if (LOOKUP("cons", func)) return builtin_cons(a);
-  if (LOOKUP("len",  func)) return builtin_len(a);
-  if (LOOKUP("min", func)) return builtin_op(a, func);
-  if (LOOKUP("max", func)) return builtin_op(a, func);
-  if (SUBSTR("+-/*%^", func)) return builtin_op(a, func);
+lval* builtin(lenv* e, lval* a, char* func) {
+  if (LOOKUP("list", func)) return builtin_list(e, a);
+  if (LOOKUP("head", func)) return builtin_head(e, a);
+  if (LOOKUP("tail", func)) return builtin_tail(e, a);
+  if (LOOKUP("join", func)) return builtin_join(e, a);
+  if (LOOKUP("eval", func)) return builtin_eval(e, a);
+  if (LOOKUP("cons", func)) return builtin_cons(e, a);
+  if (LOOKUP("len",  func)) return builtin_len(e, a);
+  if (LOOKUP("min", func)) return builtin_op(e, a, func);
+  if (LOOKUP("max", func)) return builtin_op(e, a, func);
+  if (SUBSTR("+-/*%^", func)) return builtin_op(e, a, func);
 
   RETURN_ERR(a, LERR_BUILTIN_LOOKUP);
 }
 
-lval* builtin_op(lval* a, char* op) {
+lval* builtin_op(lenv* e, lval* a, char* op) {
   FOREACH_SEXP(i, a) {
     if (L_TYPE_N(a, i) != LVAL_NUM) {
       RETURN_ERR(a, LERR_NON_NUMBER);
@@ -484,7 +527,7 @@ lval* builtin_op(lval* a, char* op) {
   return x;
 }
 
-lval* builtin_cons(lval* a) {
+lval* builtin_cons(lenv* e, lval* a) {
   if (L_COUNT(a) != 2)              RETURN_ERR(a, LERR_CONS_ARITY);
   if (L_TYPE_N(a, 1) != LVAL_QEXP)  RETURN_ERR(a, LERR_CONS_TYPE);
 
@@ -494,17 +537,17 @@ lval* builtin_cons(lval* a) {
   return lval_cons(x, s);
 }
 
-lval* builtin_eval(lval* a) {
+lval* builtin_eval(lenv *e, lval* a) {
   if (L_COUNT(a) != 1)             RETURN_ERR(a, LERR_EVAL_ARITY);
   if (L_TYPE_N(a, 0) != LVAL_QEXP) RETURN_ERR(a, LERR_EVAL_TYPE);
 
   lval* x = lval_take(a, 0);
   L_TYPE(x) = LVAL_SEXP; // TODO: ARGH
 
-  return lval_eval(x);
+  return lval_eval(e, x);
 }
 
-lval* builtin_head(lval* a) {
+lval* builtin_head(lenv* e, lval* a) {
   if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_HEAD_ARITY);
   if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_HEAD_TYPE);
   if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_HEAD_EMPTY);
@@ -518,7 +561,7 @@ lval* builtin_head(lval* a) {
   return v;
 }
 
-lval* builtin_join(lval* a) {
+lval* builtin_join(lenv* e, lval* a) {
   FOREACH_SEXP(i, a) {
     if (L_TYPE_N(a, i) != LVAL_QEXP) RETURN_ERR(a, LERR_JOIN_TYPE);
   }
@@ -534,17 +577,17 @@ lval* builtin_join(lval* a) {
   return x;
 }
 
-lval* builtin_len(lval* a) {
+lval* builtin_len(lenv* e, lval* a) {
   return lval_num(L_COUNT_N(a, 0));
 }
 
-lval* builtin_list(lval* a) {
+lval* builtin_list(lenv* e, lval* a) {
   L_TYPE(a) = LVAL_QEXP; // TODO: these are all mutating lval. HORRIBLE.
 
   return a;
 }
 
-lval* builtin_tail(lval* a) {
+lval* builtin_tail(lenv* e, lval* a) {
   if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_TAIL_ARITY);
   if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_TAIL_TYPE);
   if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_TAIL_EMPTY);
@@ -554,6 +597,22 @@ lval* builtin_tail(lval* a) {
   lval_del(lval_pop(v, 0)); // WTF? This seems really bad!
 
   return v;
+}
+
+lval *builtin_add(lenv *e, lval *a) {
+  return builtin_op(e, a, "+");
+}
+
+lval *builtin_sub(lenv *e, lval *a) {
+  return builtin_op(e, a, "-");
+}
+
+lval *builtin_mul(lenv *e, lval *a) {
+  return builtin_op(e, a, "*");
+}
+
+lval *builtin_div(lenv *e, lval *a) {
+  return builtin_op(e, a, "/");
 }
 
 /*
@@ -636,13 +695,16 @@ int main() {
             lispy    : /^/ <expr>* /$/;                         ",
             Number, Symbol, Sexp, Qexp, Expr, Lispy);
 
+  lenv* env = lenv_new();
+  lenv_add_builtins(env);
+
   while (1) {
     char * input = readline("lispy> ");
     if (!input) break;
     add_history(input);
 
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
-      lval* x = lval_eval(lval_read(r.output));
+      lval* x = lval_eval(env, lval_read(r.output));
       lval_println(x);
       lval_del(x);
 
@@ -655,6 +717,7 @@ int main() {
     free(input);
   }
 
+  free(env);
   mpc_cleanup(6, Number, Symbol, Sexp, Qexp, Expr, Lispy);
 
   return 0;
