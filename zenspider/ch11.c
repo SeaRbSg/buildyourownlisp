@@ -102,6 +102,8 @@ lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
 void lenv_println(lenv *e);
 
+void lenv_add_builtin(lenv *e, char *name, lbuiltin *func);
+void lenv_add_builtins(lenv *e);
 lval *lval_eval(lenv *e, lval *v);
 lval *lval_eval_sexp(lenv *e, lval *v);
 lval *lval_read(mpc_ast_t *t);
