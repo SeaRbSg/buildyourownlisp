@@ -14,7 +14,7 @@ typedef struct lval {
   struct lval** cell;
 } lval;
 
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR };
+enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR };
 
 lval* lval_num(long x) {
   lval* v = malloc(sizeof(lval));
@@ -47,11 +47,21 @@ lval* lval_sexpr(void) {
   return v;
 }
 
+lval* lval_qepr(void) {
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_QEXPR;
+  v->count = 0;
+  v-> cell = NULL;
+  return v;
+};
+
 void lval_del(lval* v) {
   switch (v->type) {
   case LVAL_NUM: break;
   case LVAL_ERR: free(v->err); break;
   case LVAL_SYM: free(v->sym); break;
+
+  case LVAL_QEXPR:
   case LVAL_SEXPR:
     for (int i = 0; i < v->count; i++) {
       lval_del(v->cell[i]);
@@ -120,6 +130,9 @@ void lval_print(lval* val) {
     break;
   case LVAL_SEXPR:
     lval_expr_print(val, '(', ')');
+    break;
+  case LVAL_QEXPR:
+    lval_expr_print(val, '{', '}');
     break;
   }
 }
