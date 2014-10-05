@@ -354,6 +354,18 @@ void lenv_del(lenv* e) {
     free(e);
 }
 
+void lenv_print_val(char* sym, lval* v) {
+    printf("%s:\t", sym);
+    lval_print(v);
+    printf("\n");
+}
+
+void lenv_print(lenv* e) {
+    for (int i=0; i < e->count; i++) {
+        lenv_print_val(e->syms[i], e->vals[i]);
+    }
+}
+
 lval* lenv_get(lenv* e, lval* k) {
     /* linear scan, not cool bro. */
     for (int i=0; i < e->count; i++) {
@@ -656,7 +668,7 @@ lval* builtin_def(lenv* e, lval* a) {
     lval* syms = a->cell[0];
 
     for (int i=0; i < syms->count; i++) {
-        LCHECK(a, (syms->cell[i]-> type == LVAL_SYM), "Function 'def' cannot define non-symbol!");
+        LCHECK(a, (syms->cell[i]->type == LVAL_SYM), "Function 'def' cannot define non-symbol!");
     }
 
     LCHECK(a, (syms->count == a->count-1), "Function 'def' cannot define incorrect number of values to symbols!");
@@ -666,6 +678,30 @@ lval* builtin_def(lenv* e, lval* a) {
     }
 
     lval_del(a);
+    return lval_sexpr();
+}
+
+lval* builtin_env(lenv* e, lval* a) {
+    LCHECK_COUNT("env", a, 1);
+    LCHECK_TYPE("env", a->cell[0], LVAL_QEXPR);
+
+    lval* syms = a->cell[0];
+
+    for (int i=0; i < syms->count; i++) {
+        LCHECK(a, (syms->cell[i]->type == LVAL_SYM), "Function 'env' cannot describe non-symbol!");
+    }
+
+    if (syms->count == 0) {
+        lenv_print(e);
+    } else {
+        for (int i=0; i < syms->count; i++) {
+            lval* v = lenv_get(e, syms->cell[i]);
+            lenv_print_val(syms->cell[i]->sym, v);
+        }
+    }
+
+    lval_del(a);
+
     return lval_sexpr();
 }
 
@@ -680,6 +716,7 @@ void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
 void lenv_add_builtins(lenv* e) {
     /* Variable functions */
     lenv_add_builtin(e, "def", builtin_def);
+    lenv_add_builtin(e, "env", builtin_env);
 
     /* List functions */
     lenv_add_builtin(e, "list", builtin_list);
@@ -716,6 +753,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
     if (v->count == 0) {
         return v;
     }
+
     if (v->count == 1) {
         return lval_take(v, 0);
     }
