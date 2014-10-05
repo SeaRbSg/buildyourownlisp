@@ -4,6 +4,8 @@
 #include <editline/readline.h>
 
 #define LASSERT(args, cond, err) if (!(cond)) {lval_del(args); return lval_err(err); }
+#define LEMPTYLIST(args) LASSERT(args, ((args)->cell[0]->count != 0), "Function passed the empty list!")
+#define LARGCOUNT(args, numargs) LASSERT(args, ((args)->count == (numargs)), "Function passed the incorrect number of arguments.")
 
 /** Types **/
 
@@ -44,9 +46,10 @@ lval *builtin_tail(lval *a);
 lval *builtin_list(lval *a);
 lval *builtin_eval(lval *a);
 lval *builtin_join(lval *a);
+lval *builtin_cons(lval *a);
 lval *lval_join(lval *x, lval *y);
-lval *builtin_op(lval *a, char *op);
 lval *builtin(lval *a, char *func);
+lval *builtin_op(lval *a, char *op);
 int main(void);
 
 /** Actual Code **/
@@ -255,12 +258,10 @@ lval* lval_take(lval* v, int i) {
 }
 
 lval* builtin_head(lval* a) { 
-  LASSERT(a, (a->count == 1), 
-          "Function 'head' passed too many arguments!");
+  LARGCOUNT(a, 1);
+  LEMPTYLIST(a);
   LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), 
           "Function 'head' passed incorrect type!");
-  LASSERT(a, (a->cell[0]->count != 0),
-          "Function 'head' passed {}!");
 
   lval* v = lval_take(a, 0);
 
@@ -272,12 +273,10 @@ lval* builtin_head(lval* a) {
 }
 
 lval* builtin_tail(lval* a) { 
-  LASSERT(a, (a->count == 1), 
-          "Function 'tail', passed too many arguments!");
+  LARGCOUNT(a, 1);
   LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
           "Function 'tail', passed incorrect type!");
-  LASSERT(a, (a->cell[0]->count != 0), 
-          "Function 'tail' passed {}!");
+  LEMPTYLIST(a);
 
   lval* v = lval_take(a, 0);
 
@@ -285,14 +284,13 @@ lval* builtin_tail(lval* a) {
   return v;
 }
 
-lval* builtin_list(lval* a) {
+lval* builtin_list(lval* a) { 
   a->type = LVAL_QEXPR;
   return a;
 }
 
 lval* builtin_eval(lval* a) { 
-  LASSERT(a, (a->count == 1), 
-          "Function 'eval' passed too many arguments!");
+  LARGCOUNT(a, 1);
   LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), 
           "Function 'eval' passed incorrect type!");
 
@@ -315,6 +313,21 @@ lval* builtin_join(lval* a) {
 
   lval_del(a);
   return x;
+}
+
+lval* builtin_cons(lval* a) {
+  LEMPTYLIST(a);
+  LARGCOUNT(a, 2);
+
+  lval* v = lval_pop(a, 0);   /* value */
+  lval* q = lval_pop(a, 0);   /* list I HATE THAT POP MUTATES*/
+  
+  lval* result = lval_qexpr();
+  result = lval_add(result, v);
+  
+  result = lval_join(result, q);
+  
+  return result;
 }
 
 lval* lval_join(lval* x, lval* y) {
@@ -343,6 +356,9 @@ lval* builtin(lval* a, char* func) {
   }
   if (strcmp("eval", func) == 0) { 
     return builtin_eval(a);
+  }
+  if (strcmp("cons", func) == 0) { 
+    return builtin_cons(a);
   }
   if (strstr("+-/*^%minmax", func)) { 
     return builtin_op(a, func); 
@@ -385,7 +401,7 @@ lval* builtin_op(lval* a, char* op) {
     if (strcmp(op, "*") == 0) {
       x->num *= y->num; 
     }
-    if (strcmp(op, "^") == 0) { 
+    if (strcmp(op, "") == 0) { 
       x->num = pow(x->num, y->num);
     }
     if (strcmp(op, "/") == 0) {
@@ -434,7 +450,7 @@ int main() {
   mpca_lang(MPCA_LANG_DEFAULT,
             "                                                                 \
             number   :   /-?[0-9]+/ ;                                         \
-            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ;                             \
+            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" ;                             \
             sexpr    : '(' <expr>* ')' ;                                      \
             qexpr    : '{' <expr>* '}' ;                                      \
             expr     : <number> | <symbol> | <sexpr> | <qexpr> ;              \
