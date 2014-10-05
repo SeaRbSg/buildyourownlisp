@@ -419,7 +419,9 @@ lval* builtin(lval* a, char* func) {
   if (LOOKUP("eval", func)) return builtin_eval(a);
   if (LOOKUP("cons", func)) return builtin_cons(a);
   if (LOOKUP("len",  func)) return builtin_len(a);
-  if (SUBSTR("+-/*", func)) return builtin_op(a, func);
+  if (LOOKUP("min", func)) return builtin_op(a, func);
+  if (LOOKUP("max", func)) return builtin_op(a, func);
+  if (SUBSTR("+-/*%^", func)) return builtin_op(a, func);
 
   RETURN_ERR(a, LERR_BUILTIN_LOOKUP);
 }
