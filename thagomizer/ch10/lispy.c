@@ -12,7 +12,7 @@
 typedef struct lval {
   int type;
   long num;
-  
+
   /* Error and Symbol types have some string data */
   char* err;
   char* sym;
@@ -82,7 +82,7 @@ lval* lval_sym(char* s) {
 }
 
 /* A pointer to a new empty Sexpr lval */
-lval* lval_sexpr(void) { 
+lval* lval_sexpr(void) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_SEXPR;
   v->count = 0;
@@ -91,7 +91,7 @@ lval* lval_sexpr(void) {
 }
 
 /* A pointer to a new empty Qexpr lval */
-lval* lval_qexpr(void) { 
+lval* lval_qexpr(void) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_QEXPR;
   v->count = 0;
@@ -99,7 +99,7 @@ lval* lval_qexpr(void) {
   return v;
 }
 
-void lval_del(lval* v) { 
+void lval_del(lval* v) {
   switch (v->type) {
   case LVAL_NUM: break;
 
@@ -108,13 +108,13 @@ void lval_del(lval* v) {
 
   case LVAL_QEXPR:
   case LVAL_SEXPR:
-    for (int i = 0; i < v->count; i++) { 
+    for (int i = 0; i < v->count; i++) {
       lval_del(v->cell[i]);
     }
     free(v->cell);
     break;
   }
-  
+
   free(v);
 }
 
@@ -148,7 +148,7 @@ lval* lval_read(mpc_ast_t* t) {
     if (strcmp(t->children[i]->tag,  "regex") == 0) { continue; }
     x = lval_add(x, lval_read(t->children[i]));
   }
-  
+
   return x;
 }
 
@@ -156,8 +156,8 @@ void lval_expr_print(lval* v, char open, char close) {
   putchar(open);
   for (int i = 0; i < v->count; i++) {
     lval_print(v->cell[i]);
-    
-    if (i != (v->count-1)) { 
+
+    if (i != (v->count-1)) {
       putchar(' ');
     }
   }
@@ -165,28 +165,28 @@ void lval_expr_print(lval* v, char open, char close) {
 }
 
 void lval_print(lval* v) {
-  switch (v->type) { 
-  case LVAL_NUM: 
-    printf("%li", v->num); 
+  switch (v->type) {
+  case LVAL_NUM:
+    printf("%li", v->num);
     break;
-  case LVAL_ERR: 
-    printf("Error: %s", v->err); 
+  case LVAL_ERR:
+    printf("Error: %s", v->err);
     break;
-  case LVAL_SYM: 
-    printf("%s", v->sym); 
+  case LVAL_SYM:
+    printf("%s", v->sym);
     break;
-  case LVAL_SEXPR: 
-    lval_expr_print(v, '(', ')'); 
+  case LVAL_SEXPR:
+    lval_expr_print(v, '(', ')');
     break;
-  case LVAL_QEXPR: 
-    lval_expr_print(v, '{', '}'); 
+  case LVAL_QEXPR:
+    lval_expr_print(v, '{', '}');
     break;
   }
 }
 
-void lval_println(lval* v) { 
-  lval_print(v); 
-  putchar('\n'); 
+void lval_println(lval* v) {
+  lval_print(v);
+  putchar('\n');
 }
 
 lval* lval_eval_sexpr(lval* v) {
@@ -204,19 +204,19 @@ lval* lval_eval_sexpr(lval* v) {
   }
 
   /* Empty Expression */
-  if (v->count == 0) { 
+  if (v->count == 0) {
     return v;
   }
 
   /* Single Expression */
-  if (v->count == 1) { 
+  if (v->count == 1) {
     return lval_take(v, 0);
   }
 
   /* Ensure First Element is Symbol */
   lval* f = lval_pop(v, 0);
   if (f->type != LVAL_SYM) {
-    lval_del(f); 
+    lval_del(f);
     lval_del(v);
     return lval_err("S-expression Does not start with symbol!");
   }
@@ -227,9 +227,9 @@ lval* lval_eval_sexpr(lval* v) {
   return result;
 }
 
-lval* lval_eval(lval* v) { 
+lval* lval_eval(lval* v) {
   /* Evaluate Sexpressions */
-  if (v->type == LVAL_SEXPR) { 
+  if (v->type == LVAL_SEXPR) {
     return lval_eval_sexpr(v);
   }
 
@@ -258,22 +258,22 @@ lval* lval_take(lval* v, int i) {
   return x;
 }
 
-lval* builtin_head(lval* a) { 
+lval* builtin_head(lval* a) {
   LARGCOUNT(a, 1);
   LEMPTYLIST(a);
-  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), 
+  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
           "Function 'head' passed incorrect type!");
 
   lval* v = lval_take(a, 0);
 
   while (v->count > 1) {
-    lval_del(lval_pop(v, 1)); 
+    lval_del(lval_pop(v, 1));
   }
-  
+
   return v;
 }
 
-lval* builtin_tail(lval* a) { 
+lval* builtin_tail(lval* a) {
   LARGCOUNT(a, 1);
   LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
           "Function 'tail', passed incorrect type!");
@@ -285,7 +285,7 @@ lval* builtin_tail(lval* a) {
   return v;
 }
 
-lval* builtin_init(lval* a) { 
+lval* builtin_init(lval* a) {
   LARGCOUNT(a, 1);
   LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
           "Function 'tail', passed incorrect type!");
@@ -300,14 +300,14 @@ lval* builtin_init(lval* a) {
   return v;
 }
 
-lval* builtin_list(lval* a) { 
+lval* builtin_list(lval* a) {
   a->type = LVAL_QEXPR;
   return a;
 }
 
-lval* builtin_eval(lval* a) { 
+lval* builtin_eval(lval* a) {
   LARGCOUNT(a, 1);
-  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), 
+  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
           "Function 'eval' passed incorrect type!");
 
   lval* x = lval_take(a, 0);
@@ -315,7 +315,7 @@ lval* builtin_eval(lval* a) {
   return lval_eval(x);
 }
 
-lval* builtin_join(lval* a) { 
+lval* builtin_join(lval* a) {
   for (int i = 0; i < a->count; i++) {
     LASSERT(a, (a->cell[i]->type == LVAL_QEXPR),
             "Function 'join' passed incorrect type.");
@@ -323,7 +323,7 @@ lval* builtin_join(lval* a) {
 
   lval* x = lval_pop(a, 0);
 
-  while (a->count) { 
+  while (a->count) {
     x = lval_join(x, lval_pop(a, 0));
   }
 
@@ -337,12 +337,12 @@ lval* builtin_cons(lval* a) {
 
   lval* v = lval_pop(a, 0);   /* value */
   lval* q = lval_pop(a, 0);   /* list I HATE THAT POP MUTATES*/
-  
+
   lval* result = lval_qexpr();
   result = lval_add(result, v);
-  
+
   result = lval_join(result, q);
-  
+
   return result;
 }
 
@@ -350,13 +350,13 @@ lval* builtin_len(lval* a) {
   LARGCOUNT(a, 1);
 
   lval* v = lval_take(a, 0);
-  
+
   return lval_num(v->count);
 }
 
 lval* lval_join(lval* x, lval* y) {
   /* For each cell in 'y' add it to 'x' */
-  while (y->count) { 
+  while (y->count) {
     x = lval_add(x, lval_pop(y, 0));
   }
 
@@ -365,40 +365,40 @@ lval* lval_join(lval* x, lval* y) {
   return x;
 }
 
-lval* builtin(lval* a, char* func) { 
-  if (strcmp("list", func) == 0) { 
-    return builtin_list(a); 
+lval* builtin(lval* a, char* func) {
+  if (strcmp("list", func) == 0) {
+    return builtin_list(a);
   }
-  if (strcmp("head", func) == 0) { 
+  if (strcmp("head", func) == 0) {
     return builtin_head(a);
   }
   if (strcmp("tail", func) == 0) {
     return builtin_tail(a);
   }
-  if (strcmp("join", func) == 0) { 
+  if (strcmp("join", func) == 0) {
     return builtin_join(a);
   }
-  if (strcmp("eval", func) == 0) { 
+  if (strcmp("eval", func) == 0) {
     return builtin_eval(a);
   }
-  if (strcmp("cons", func) == 0) { 
+  if (strcmp("cons", func) == 0) {
     return builtin_cons(a);
   }
-  if (strcmp("len", func) == 0) { 
+  if (strcmp("len", func) == 0) {
     return builtin_len(a);
   }
-  if (strcmp("init", func) == 0) { 
+  if (strcmp("init", func) == 0) {
     return builtin_init(a);
   }
-  if (strstr("+-/*^%minmax", func)) { 
-    return builtin_op(a, func); 
+  if (strstr("+-/*^%minmax", func)) {
+    return builtin_op(a, func);
   }
   lval_del(a);
   return lval_err("Unknown Function!");
 }
 
 lval* builtin_op(lval* a, char* op) {
-  
+
   /* Ensure all arguments are numbers */
   for (int i = 0; i < a->count; i++) {
     if (a->cell[i]->type != LVAL_NUM) {
@@ -409,34 +409,34 @@ lval* builtin_op(lval* a, char* op) {
 
   /* Pop the first element */
   lval* x = lval_pop(a, 0);
-  
+
   /* If no arguments and subtraction: perform unary negation */
   if ((strcmp(op, "-") == 0) && a->count == 0) {
-    x->num = -x->num; 
+    x->num = -x->num;
   }
 
   /* While there are still elements remaining */
   while (a->count > 0) {
-    
+
     /* Pop the next element */
     lval* y = lval_pop(a, 0);
 
     /* Perform operation */
-    if (strcmp(op, "+") == 0) { 
+    if (strcmp(op, "+") == 0) {
       x->num += y->num;
     }
     if (strcmp(op, "-") == 0) {
       x->num -= y->num ;
     }
     if (strcmp(op, "*") == 0) {
-      x->num *= y->num; 
+      x->num *= y->num;
     }
-    if (strcmp(op, "^") == 0) { 
+    if (strcmp(op, "^") == 0) {
       x->num = pow(x->num, y->num);
     }
     if (strcmp(op, "/") == 0) {
-      if (y->num == 0) { 
-        lval_del(x); 
+      if (y->num == 0) {
+        lval_del(x);
         lval_del(y);
         x = lval_err("Division By Zero!");
         break;
@@ -452,10 +452,10 @@ lval* builtin_op(lval* a, char* op) {
       }
       x->num = x->num % y->num;
     }
-    if (strcmp(op, "min") == 0) { 
+    if (strcmp(op, "min") == 0) {
       x->num = x->num <= y->num ? x->num : y->num;
     }
-    if (strcmp(op, "max") == 0) { 
+    if (strcmp(op, "max") == 0) {
       x->num = x->num >= y->num ? x->num : y->num;
     }
 
