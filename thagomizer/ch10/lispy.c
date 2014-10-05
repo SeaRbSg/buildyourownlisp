@@ -285,6 +285,21 @@ lval* builtin_tail(lval* a) {
   return v;
 }
 
+lval* builtin_init(lval* a) { 
+  LARGCOUNT(a, 1);
+  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR),
+          "Function 'tail', passed incorrect type!");
+  LEMPTYLIST(a);
+
+  lval* v = lval_take(a, 0);
+
+  long count = v->count;
+
+  lval* last = lval_pop(v, count - 1);
+  lval_del(last);
+  return v;
+}
+
 lval* builtin_list(lval* a) { 
   a->type = LVAL_QEXPR;
   return a;
@@ -371,6 +386,9 @@ lval* builtin(lval* a, char* func) {
   }
   if (strcmp("len", func) == 0) { 
     return builtin_len(a);
+  }
+  if (strcmp("init", func) == 0) { 
+    return builtin_init(a);
   }
   if (strstr("+-/*^%minmax", func)) { 
     return builtin_op(a, func); 
@@ -462,7 +480,7 @@ int main() {
   mpca_lang(MPCA_LANG_DEFAULT,
             "                                                                 \
             number   :   /-?[0-9]+/ ;                                         \
-            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | \"len\" ;                             \
+            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | \"len\" | \"init\" ; \
             sexpr    : '(' <expr>* ')' ;                                      \
             qexpr    : '{' <expr>* '}' ;                                      \
             expr     : <number> | <symbol> | <sexpr> | <qexpr> ;              \
