@@ -336,12 +336,13 @@ void lenv_put(lenv* e, lval* k, lval* v) {
  */
 
 lval* lval_eval(lval* v) {
-  if (L_TYPE(v) == LVAL_SEXP) {
+  switch (L_TYPE(v)) {
+  case LVAL_SEXP:
     return lval_eval_sexp(v);
+    break;
+  default:
+    return v; // all other types evaluate to themselves
   }
-
-  // all other types evaluate to themselves
-  return v;
 }
 
 lval* lval_eval_sexp(lval* v) {
