@@ -338,6 +338,9 @@ lval* builtin_cons(lval* a) {
   lval* v = lval_pop(a, 0);   /* value */
   lval* q = lval_pop(a, 0);   /* list I HATE THAT POP MUTATES*/
 
+  LASSERT(q, (q->type == LVAL_QEXPR),
+          "Function 'cons' passed incorrect type.");
+
   lval* result = lval_qexpr();
   result = lval_add(result, v);
 
