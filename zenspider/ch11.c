@@ -121,8 +121,7 @@ lval* lval_new() {
 lval* lval_err(char* m) {
   lval* v = lval_new();
   L_TYPE(v) = LVAL_ERR;
-  L_ERR(v) = malloc(strlen(m) + 1);
-  strcpy(L_ERR(v), m);
+  L_ERR(v) = strdup(m);
   return v;
 }
 
