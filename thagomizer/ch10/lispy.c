@@ -47,6 +47,7 @@ lval *builtin_list(lval *a);
 lval *builtin_eval(lval *a);
 lval *builtin_join(lval *a);
 lval *builtin_cons(lval *a);
+lval *builtin_len(lval *a);
 lval *lval_join(lval *x, lval *y);
 lval *builtin(lval *a, char *func);
 lval *builtin_op(lval *a, char *op);
@@ -330,6 +331,14 @@ lval* builtin_cons(lval* a) {
   return result;
 }
 
+lval* builtin_len(lval* a) {
+  LARGCOUNT(a, 1);
+
+  lval* v = lval_take(a, 0);
+  
+  return lval_num(v->count);
+}
+
 lval* lval_join(lval* x, lval* y) {
   /* For each cell in 'y' add it to 'x' */
   while (y->count) { 
@@ -359,6 +368,9 @@ lval* builtin(lval* a, char* func) {
   }
   if (strcmp("cons", func) == 0) { 
     return builtin_cons(a);
+  }
+  if (strcmp("len", func) == 0) { 
+    return builtin_len(a);
   }
   if (strstr("+-/*^%minmax", func)) { 
     return builtin_op(a, func); 
@@ -450,7 +462,7 @@ int main() {
   mpca_lang(MPCA_LANG_DEFAULT,
             "                                                                 \
             number   :   /-?[0-9]+/ ;                                         \
-            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" ;                             \
+            symbol   :   '+' | '-' | '*' | '/' | '%' | '^' | /min/ | /max/ | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \"cons\" | \"len\" ;                             \
             sexpr    : '(' <expr>* ')' ;                                      \
             qexpr    : '{' <expr>* '}' ;                                      \
             expr     : <number> | <symbol> | <sexpr> | <qexpr> ;              \
