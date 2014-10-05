@@ -46,6 +46,8 @@ char* ltype_name(lval_type_t t) {
     switch(t) {
         case LVAL_FUN:
             return "Function";
+        case LVAL_DUB:
+            return "Double";
         case LVAL_NUM:
             return "Number";
         case LVAL_ERR:
@@ -705,6 +707,19 @@ lval* builtin_env(lenv* e, lval* a) {
     return lval_sexpr();
 }
 
+lval* builtin_exit(lenv* e, lval* a) {
+    LCHECK_COUNT("exit", a, 1);
+
+    /* evaluates arguments and exits with the resulting error code */
+    lval* x = lval_take(a, 0);
+    lval* result = lval_eval(e, x);
+    LCHECK_TYPE("exit", result, LVAL_NUM);
+    printf("Goodbye, cruel world.\n");
+    exit(result->num);
+
+    /*  no cleanup or return because fuck it, we're exiting. */
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
     lval* k = lval_sym(name);
     lval* v = lval_fun(name, func);
@@ -714,6 +729,9 @@ void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
 }
 
 void lenv_add_builtins(lenv* e) {
+    /* REPL functions */
+    lenv_add_builtin(e, "exit", builtin_exit);
+
     /* Variable functions */
     lenv_add_builtin(e, "def", builtin_def);
     lenv_add_builtin(e, "env", builtin_env);
