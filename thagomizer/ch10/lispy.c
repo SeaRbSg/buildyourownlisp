@@ -431,7 +431,7 @@ lval* builtin_op(lval* a, char* op) {
     if (strcmp(op, "*") == 0) {
       x->num *= y->num; 
     }
-    if (strcmp(op, "") == 0) { 
+    if (strcmp(op, "^") == 0) { 
       x->num = pow(x->num, y->num);
     }
     if (strcmp(op, "/") == 0) {
