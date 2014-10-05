@@ -157,6 +157,53 @@ lval* lval_take(lval* v, int i) {
   return x;
 }
 
+lval* builtin_head(lval* a) {
+  if (a->count != 1) {
+    lval_del(a);
+    return lval_err("function 'head' passed too many arguments");
+  }
+
+  if (a->cell[0]->type != LVAL_QEXPR) {
+    lval_del(a);
+    return lval_err("function 'head' passed incorrect type!");
+  }
+
+  if (a->cell[0]->count == 0) {
+    lval_del(a);
+    return lval_err("function 'head' passed '{}'!");
+  }
+
+  lval* v = lval_take(a, 0);
+
+  while (v->count > 1) {
+    lval_del(lval_pop(v, 1));
+  }
+  
+  return v;
+}
+
+lval* builtin_tail(lval* a) {
+  if (a->count != 1) {
+    lval_del(a);
+    return lval_err("function 'tail' passed too many arguments");
+  }
+  
+  if (a->cell[0]->type != LVAL_QEXPR) {
+    lval_del(a);
+    return lval_err("function 'tail' passed incorrect types");
+  }
+  
+  if (a->cell[0]->count == 0) {
+    lval_del(a);
+    return lval_err("function 'tail' passed {}!");
+  }
+
+  lval* v = lval_take(a, 0);
+
+  lval_del(lval_pop(v, 0));
+  return v;
+}
+
 lval* builtin_op(lval* a, char* op) {
   
   for (int i = 0; i < a->count; i++) {
@@ -240,7 +287,7 @@ int main(int argc, char** argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
 	    "											\
 		  number	: /-?[0-9]+/ ;							\
-		  symbol	: '+' | '-' | '*' | '/' | '%' | '^' | \"min\" | \"max\" ;	\
+		  symbol	: '+' | '-' | '*' | '/' | '%' | '^' | \"min\" | \"max\" | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ;	\
                   sexpr         : '(' <expr>* ')' ;						\
                   qexpr         : '{' <expr>* '}' ;						\
 		  expr		: <number> | <symbol> | <sexpr> | <qexpr>;			\
