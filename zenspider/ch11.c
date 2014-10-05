@@ -22,6 +22,7 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
 #define LERR_EVAL_TYPE      "Function 'eval' passed incorrect type"
 #define LERR_CONS_ARITY     "Function 'cons' passed wrong number of arguments"
 #define LERR_CONS_TYPE      "Function 'cons' passed incorrect type on tail"
+#define LERR_ENV_GET        "Unbound symbol"
 
 struct lval;
 struct lenv;
@@ -44,7 +45,9 @@ typedef struct lval {
 } lval;
 
 typedef struct lenv {
-  int i;
+  int count;
+  char** syms;
+  struct lval** vals;
 } lenv;
 
 #define L_COUNT(lval)     (lval)->v.sexp.count
@@ -59,16 +62,24 @@ typedef struct lenv {
 #define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
 #define L_TYPE_N(lval, n) L_CELL_N(lval, n)->type
 #define L_COUNT_N(lval, n) L_COUNT(L_CELL_N(lval, n))
-
-#define RETURN_ERR(s, msg) if (1) { lval_del(s); return lval_err(msg); }
 #define FOREACH_SEXP(i, e) for (int i = 0, _max = L_COUNT(e); i < _max; ++i)
 
+// envs
+#define E_COUNT(e) (e)->count
+#define E_SYMS(e) (e)->syms
+#define E_VALS(e) (e)->vals
+#define E_SYM_N(e, i) (e)->syms[i]
+#define E_VAL_N(e, i) (e)->vals[i]
+#define FOREACH_ENV(i, e) for (int i = 0, _max = E_COUNT(e); i < _max; ++i)
+
+// utilities
+#define RETURN_ERR(s, msg) if (1) { lval_del(s); return lval_err(msg); }
 #define LOOKUP(a, b) strcmp((a), (b)) == 0
 #define SUBSTR(a, b) strstr((a), (b))
 
 // prototypes -- via cproto -- I'm not a masochist.
 
-/* ch10.c */
+/* ch11.c */
 lval *lval_new(void);
 lval *lval_err(char *m);
 lval *lval_fun(lbuiltin* func);
@@ -76,14 +87,19 @@ lval *lval_num(long x);
 lval *lval_qexp(void);
 lval *lval_sexp(void);
 lval *lval_sym(char *s);
+lval *lval_copy(lval *v);
 void lval_del(lval *v);
-
 
 lval *lval_add(lval *v, lval *x);
 lval *lval_cons(lval *x, lval *s);
 lval *lval_join(lval *x, lval *y);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
+
+lenv *lenv_new(void);
+void lenv_del(lenv *e);
+lval *lenv_get(lenv *e, lval *k);
+void lenv_put(lenv *e, lval *k, lval *v);
 
 lval *lval_eval(lval *v);
 lval *lval_eval_sexp(lval *v);
@@ -264,6 +280,55 @@ lval* lval_take(lval* v, int i) { // TODO: prove lval_del is appropriate
   lval* x = lval_pop(v, i);
   lval_del(v);
   return x;
+}
+
+/*
+ * Lenv
+ */
+
+lenv* lenv_new(void) {
+  lenv* e = malloc(sizeof(lenv));
+  E_COUNT(e) = 0;
+  E_SYMS(e) = NULL;
+  E_VALS(e) = NULL;
+  return e;
+}
+
+void lenv_del(lenv* e) {
+  FOREACH_ENV(i, e) {
+    free(E_SYM_N(e, i));
+    lval_del(E_VAL_N(e, i));
+  }
+  free(E_SYMS(e));
+  free(E_VALS(e));
+  free(e);
+}
+
+lval* lenv_get(lenv* e, lval* k) {
+  FOREACH_ENV(i, e) {
+    if (LOOKUP(E_SYM_N(e, i), L_SYM(k))) {
+      return lval_copy(E_VAL_N(e, i));
+    }
+  }
+
+  return lval_err(LERR_ENV_GET);
+}
+
+void lenv_put(lenv* e, lval* k, lval* v) {
+  FOREACH_ENV(i, e) {
+    if (LOOKUP(E_SYM_N(e, i), L_SYM(k))) {
+      lval_del(E_VAL_N(e, i));
+      E_VAL_N(e, i) = lval_copy(v);
+      return;
+    }
+  }
+
+  E_COUNT(e)++;
+  E_VALS(e) = realloc(E_VALS(e), sizeof(lval*) * E_COUNT(e));
+  E_SYMS(e) = realloc(E_SYMS(e), sizeof(char*) * E_COUNT(e));
+
+  E_VAL_N(e, E_COUNT(e)-1) = lval_copy(v);
+  E_SYM_N(e, E_COUNT(e)-1) = strdup(L_SYM(k));
 }
 
 /*
