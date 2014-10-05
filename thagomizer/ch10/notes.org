@@ -1,24 +1,5 @@
-* Give an example of a variable in our program that lives on The Stack
-A local variable a function. So the mpc_result_t variable r.
-
-* Give an example of a variable in our program that ponits to The Heap
-char* input;
-
-* What does the strcpy function do?
-It copies a string.
-
-* What does the realloc function do?
-The realloc function changes the size of a previous allocation 
-
-* What does the memmove function do?
-Copies a byte stream from one part of memory to another
-
-* How does memmove differ from memcpy?
-Memmove is guaranteed to be non-destructive if the source and
-destination regions overlap. memcpy's behavior is undefined if the two
-regions overlap.
-
- 
-
-
-
+* What are the four typical steps for adding new language features?
+** Add it to the grammar
+** Add a data structure to represent it
+** Add new functions for reading this feature from the AST 
+** Add new functions for evaluating and manipulating this feature
