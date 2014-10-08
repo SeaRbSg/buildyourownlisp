@@ -77,6 +77,27 @@ typedef struct lenv {
 #define LOOKUP(a, b) strcmp((a), (b)) == 0
 #define SUBSTR(a, b) strstr((a), (b))
 
+#define CHECK_FOR_NUMBERS(a)          \
+  FOREACH_SEXP(i, a) {                \
+    if (L_TYPE_N(a, i) != LVAL_NUM) { \
+      RETURN_ERR(a, LERR_NON_NUMBER); \
+    }                                 \
+  }
+
+#define FOREACH_NUMBER(a, r, n, code) \
+  lval* r = lval_pop(a, 0);           \
+                                      \
+  while (L_COUNT(a) > 0) {            \
+    lval* y = lval_pop(a, 0);         \
+    long n = L_NUM(y);                \
+                                      \
+    code;                             \
+                                      \
+    lval_del(y);                      \
+  }                                   \
+                                      \
+  lval_del(a);                        \
+
 // prototypes -- via cproto -- I'm not a masochist.
 
 /* ch11.c */
@@ -108,9 +129,6 @@ lval *lval_eval(lenv *e, lval *v);
 lval *lval_eval_sexp(lenv *e, lval *v);
 lval *lval_read(mpc_ast_t *t);
 lval *lval_read_num(mpc_ast_t *t);
-
-lval *builtin(lenv *e, lval *a, char *func);
-lval *builtin_op(lenv *e, lval *a, char *op);
 lval *builtin_cons(lenv *e, lval *a);
 lval *builtin_eval(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
@@ -122,6 +140,10 @@ lval *builtin_add(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
 lval *builtin_div(lenv *e, lval *a);
+lval *builtin_mod(lenv *e, lval *a);
+lval *builtin_exp(lenv *e, lval *a);
+lval *builtin_min(lenv *e, lval *a);
+lval *builtin_max(lenv *e, lval *a);
 
 long count_leaves(mpc_ast_t *t);
 void lval_print(lval *v);
@@ -368,6 +390,13 @@ void lenv_add_builtins(lenv *e) {
   lenv_add_builtin(e, "-", builtin_sub);
   lenv_add_builtin(e, "*", builtin_mul);
   lenv_add_builtin(e, "/", builtin_div);
+  lenv_add_builtin(e, "%", builtin_mod);
+  lenv_add_builtin(e, "^", builtin_exp);
+
+  lenv_add_builtin(e, "cons", builtin_cons);
+  lenv_add_builtin(e, "len",  builtin_len);
+  lenv_add_builtin(e, "min", builtin_min);
+  lenv_add_builtin(e, "max", builtin_max);
 }
 
 /*
@@ -456,82 +485,9 @@ lval* lval_read_num(mpc_ast_t* t) {
  * Builtins
  */
 
-lval* builtin(lenv* e, lval* a, char* func) {
-  if (LOOKUP("list", func)) return builtin_list(e, a);
-  if (LOOKUP("head", func)) return builtin_head(e, a);
-  if (LOOKUP("tail", func)) return builtin_tail(e, a);
-  if (LOOKUP("join", func)) return builtin_join(e, a);
-  if (LOOKUP("eval", func)) return builtin_eval(e, a);
-  if (LOOKUP("cons", func)) return builtin_cons(e, a);
-  if (LOOKUP("len",  func)) return builtin_len(e, a);
-  if (LOOKUP("min", func)) return builtin_op(e, a, func);
-  if (LOOKUP("max", func)) return builtin_op(e, a, func);
-  if (SUBSTR("+-/*%^", func)) return builtin_op(e, a, func);
-
-  RETURN_ERR(a, LERR_BUILTIN_LOOKUP);
-}
-
-lval* builtin_op(lenv* e, lval* a, char* op) {
-  FOREACH_SEXP(i, a) {
-    if (L_TYPE_N(a, i) != LVAL_NUM) {
-      RETURN_ERR(a, LERR_NON_NUMBER);
-    }
-  }
-
-  lval* x = lval_pop(a, 0);
-
-  if (LOOKUP(op, "-") && L_COUNT(a) == 0) {
-    L_NUM(x) *= -1;
-  }
-
-  while (L_COUNT(a) > 0) {
-    lval* y = lval_pop(a, 0);
-
-    long a = L_NUM(x);
-    long b = L_NUM(y);
-
-    // TODO: convert to lookup table
-    if (LOOKUP(op, "+"))   { L_NUM(x) += b; }
-    if (LOOKUP(op, "-"))   { L_NUM(x) -= b; }
-    if (LOOKUP(op, "*"))   { L_NUM(x) *= b; }
-    if (LOOKUP(op, "/"))   {
-      if (b == 0) {
-        lval_del(x);
-        lval_del(y);
-        x = lval_err(LERR_DIV_ZERO);
-        break;
-      }
-      L_NUM(x) /= b;
-    }
-    if (LOOKUP(op, "%")) {
-      if (b == 0) {
-        lval_del(x);
-        lval_del(y);
-        x = lval_err(LERR_DIV_ZERO);
-        break;
-      }
-      L_NUM(x) %= b;
-    }
-    if (LOOKUP(op, "^"))   {
-      L_NUM(x) = pow(a, b);
-    }
-    if (LOOKUP(op, "min")) { L_NUM(x) = a <= b ? a : b; }
-    if (LOOKUP(op, "max")) { L_NUM(x) = a >= b ? a : b; }
-
-    // TODO?
-    // fprintf(stderr, "WARNING: unknown operator '%s'\n", op);
-    // return lval_err(LERR_BAD_OP);
-
-    lval_del(y);
-  }
-
-  lval_del(a);
-  return x;
-}
-
 lval* builtin_cons(lenv* e, lval* a) {
-  if (L_COUNT(a) != 2)              RETURN_ERR(a, LERR_CONS_ARITY);
-  if (L_TYPE_N(a, 1) != LVAL_QEXP)  RETURN_ERR(a, LERR_CONS_TYPE);
+  if (L_COUNT(a) != 2)             RETURN_ERR(a, LERR_CONS_ARITY);
+  if (L_TYPE_N(a, 1) != LVAL_QEXP) RETURN_ERR(a, LERR_CONS_TYPE);
 
   lval* x = lval_pop(a, 0);
   lval* s = lval_pop(a, 0);
@@ -602,19 +558,71 @@ lval* builtin_tail(lenv* e, lval* a) {
 }
 
 lval *builtin_add(lenv *e, lval *a) {
-  return builtin_op(e, a, "+");
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) += n);
+  return result;
 }
 
 lval *builtin_sub(lenv *e, lval *a) {
-  return builtin_op(e, a, "-");
+  CHECK_FOR_NUMBERS(a);
+
+  lval* x = lval_pop(a, 0);
+
+  // FOREACH_NUMBER(a, result, n, L_NUM(result) += n);
+  // return result;
+
+  if (L_COUNT(a) == 0) {
+    L_NUM(x) *= -1;
+  }
+
+  while (L_COUNT(a) > 0) {
+    lval* y = lval_pop(a, 0);
+
+    long b = L_NUM(y);
+
+    L_NUM(x) -= b;
+
+    lval_del(y);
+  }
+
+  lval_del(a);
+  return x;
 }
 
 lval *builtin_mul(lenv *e, lval *a) {
-  return builtin_op(e, a, "*");
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) *= n);
+  return result;
 }
 
 lval *builtin_div(lenv *e, lval *a) {
-  return builtin_op(e, a, "/");
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) /= n);
+  return result;
+}
+
+lval *builtin_mod(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) %= n);
+  return result;
+}
+
+lval *builtin_exp(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) ^= n);
+  return result;
+}
+
+lval *builtin_min(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, long m = L_NUM(result); L_NUM(result) = n <= m ? n : m);
+  return result;
+}
+
+lval *builtin_max(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, long m = L_NUM(result); L_NUM(result) = n >= m ? n : m);
+  return result;
 }
 
 /*
