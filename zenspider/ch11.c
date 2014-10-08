@@ -103,7 +103,7 @@ typedef struct lenv {
 /* ch11.c */
 lval *lval_new(void);
 lval *lval_err(char *m);
-lval *lval_fun(lbuiltin* func);
+lval *lval_fun(lbuiltin *func);
 lval *lval_num(long x);
 lval *lval_qexp(void);
 lval *lval_sexp(void);
@@ -129,21 +129,21 @@ lval *lval_eval(lenv *e, lval *v);
 lval *lval_eval_sexp(lenv *e, lval *v);
 lval *lval_read(mpc_ast_t *t);
 lval *lval_read_num(mpc_ast_t *t);
+lval *builtin_add(lenv *e, lval *a);
 lval *builtin_cons(lenv *e, lval *a);
+lval *builtin_div(lenv *e, lval *a);
 lval *builtin_eval(lenv *e, lval *a);
+lval *builtin_exp(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
 lval *builtin_join(lenv *e, lval *a);
-lval *builtin_len(lenv *e, lval* a);
+lval *builtin_len(lenv *e, lval *a);
 lval *builtin_list(lenv *e, lval *a);
-lval *builtin_tail(lenv *e, lval *a);
-lval *builtin_add(lenv *e, lval *a);
-lval *builtin_sub(lenv *e, lval *a);
-lval *builtin_mul(lenv *e, lval *a);
-lval *builtin_div(lenv *e, lval *a);
-lval *builtin_mod(lenv *e, lval *a);
-lval *builtin_exp(lenv *e, lval *a);
-lval *builtin_min(lenv *e, lval *a);
 lval *builtin_max(lenv *e, lval *a);
+lval *builtin_min(lenv *e, lval *a);
+lval *builtin_mod(lenv *e, lval *a);
+lval *builtin_mul(lenv *e, lval *a);
+lval *builtin_sub(lenv *e, lval *a);
+lval *builtin_tail(lenv *e, lval *a);
 
 long count_leaves(mpc_ast_t *t);
 void lval_print(lval *v);
@@ -485,6 +485,12 @@ lval* lval_read_num(mpc_ast_t* t) {
  * Builtins
  */
 
+lval* builtin_add(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) += n);
+  return result;
+}
+
 lval* builtin_cons(lenv* e, lval* a) {
   if (L_COUNT(a) != 2)             RETURN_ERR(a, LERR_CONS_ARITY);
   if (L_TYPE_N(a, 1) != LVAL_QEXP) RETURN_ERR(a, LERR_CONS_TYPE);
@@ -495,6 +501,12 @@ lval* builtin_cons(lenv* e, lval* a) {
   return lval_cons(x, s);
 }
 
+lval* builtin_div(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) /= n);
+  return result;
+}
+
 lval* builtin_eval(lenv *e, lval* a) {
   if (L_COUNT(a) != 1)             RETURN_ERR(a, LERR_EVAL_ARITY);
   if (L_TYPE_N(a, 0) != LVAL_QEXP) RETURN_ERR(a, LERR_EVAL_TYPE);
@@ -503,6 +515,12 @@ lval* builtin_eval(lenv *e, lval* a) {
   L_TYPE(x) = LVAL_SEXP; // TODO: ARGH
 
   return lval_eval(e, x);
+}
+
+lval* builtin_exp(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) ^= n);
+  return result;
 }
 
 lval* builtin_head(lenv* e, lval* a) {
@@ -545,25 +563,31 @@ lval* builtin_list(lenv* e, lval* a) {
   return a;
 }
 
-lval* builtin_tail(lenv* e, lval* a) {
-  if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_TAIL_ARITY);
-  if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_TAIL_TYPE);
-  if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_TAIL_EMPTY);
-
-  lval* v = lval_take(a, 0);
-
-  lval_del(lval_pop(v, 0)); // WTF? This seems really bad!
-
-  return v;
-}
-
-lval *builtin_add(lenv *e, lval *a) {
+lval* builtin_max(lenv *e, lval *a) {
   CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, L_NUM(result) += n);
+  FOREACH_NUMBER(a, result, n, long m = L_NUM(result); L_NUM(result) = n >= m ? n : m);
   return result;
 }
 
-lval *builtin_sub(lenv *e, lval *a) {
+lval* builtin_min(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, long m = L_NUM(result); L_NUM(result) = n <= m ? n : m);
+  return result;
+}
+
+lval* builtin_mod(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) %= n);
+  return result;
+}
+
+lval* builtin_mul(lenv *e, lval *a) {
+  CHECK_FOR_NUMBERS(a);
+  FOREACH_NUMBER(a, result, n, L_NUM(result) *= n);
+  return result;
+}
+
+lval* builtin_sub(lenv *e, lval *a) {
   CHECK_FOR_NUMBERS(a);
 
   lval* x = lval_pop(a, 0);
@@ -589,40 +613,16 @@ lval *builtin_sub(lenv *e, lval *a) {
   return x;
 }
 
-lval *builtin_mul(lenv *e, lval *a) {
-  CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, L_NUM(result) *= n);
-  return result;
-}
+lval* builtin_tail(lenv* e, lval* a) {
+  if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_TAIL_ARITY);
+  if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_TAIL_TYPE);
+  if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_TAIL_EMPTY);
 
-lval *builtin_div(lenv *e, lval *a) {
-  CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, L_NUM(result) /= n);
-  return result;
-}
+  lval* v = lval_take(a, 0);
 
-lval *builtin_mod(lenv *e, lval *a) {
-  CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, L_NUM(result) %= n);
-  return result;
-}
+  lval_del(lval_pop(v, 0)); // WTF? This seems really bad!
 
-lval *builtin_exp(lenv *e, lval *a) {
-  CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, L_NUM(result) ^= n);
-  return result;
-}
-
-lval *builtin_min(lenv *e, lval *a) {
-  CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, long m = L_NUM(result); L_NUM(result) = n <= m ? n : m);
-  return result;
-}
-
-lval *builtin_max(lenv *e, lval *a) {
-  CHECK_FOR_NUMBERS(a);
-  FOREACH_NUMBER(a, result, n, long m = L_NUM(result); L_NUM(result) = n >= m ? n : m);
-  return result;
+  return v;
 }
 
 /*
