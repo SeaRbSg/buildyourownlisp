@@ -78,23 +78,35 @@ struct lval {
     lval** cell;
 };
 
-lval* lval_num(long x) {
+lval* lval_new(lval_type_t type) {
     lval* v = malloc(sizeof(lval));
-    v->type = LVAL_NUM;
+    v->type = type;
+    v->num = 0;
+    v->dub = 0.0;
+    v->err = NULL;
+    v->sym = NULL;
+    v->fun = NULL;
+    v->fname = NULL;
+
+    v->count = 0;
+    v->cell = NULL;
+    return v;
+}
+
+lval* lval_num(long x) {
+    lval* v = lval_new(LVAL_NUM);
     v->num = x;
     return v;
 }
 
 lval* lval_dub(double x) {
-    lval* v = malloc(sizeof(lval));
-    v->type = LVAL_DUB;
+    lval* v = lval_new(LVAL_DUB);
     v->dub = x;
     return v;
 }
 
 lval* lval_err(char* fmt, ...) {
-    lval* v = malloc(sizeof(lval));
-    v->type = LVAL_ERR;
+    lval* v = lval_new(LVAL_ERR);
 
     va_list va;
     va_start(va, fmt);
@@ -110,34 +122,24 @@ lval* lval_err(char* fmt, ...) {
 }
 
 lval* lval_fun(char* s, lbuiltin func) {
-    lval* v = malloc(sizeof(lval));
-    v->type = LVAL_FUN;
+    lval* v = lval_new(LVAL_FUN);
     v->fun = func;
     v->fname = strdup(s);
     return v;
 }
 
 lval* lval_sym(char* s) {
-    lval* v = malloc(sizeof(lval));
-    v->type = LVAL_SYM;
+    lval* v = lval_new(LVAL_SYM);
     v->sym = strdup(s);
     return v;
 }
 
 lval* lval_sexpr(void) {
-    lval* v = malloc(sizeof(lval));
-    v->type = LVAL_SEXPR;
-    v->count = 0;
-    v->cell = NULL;
-    return v;
+    return lval_new(LVAL_SEXPR);
 }
 
 lval* lval_qexpr(void) {
-    lval* v = malloc(sizeof(lval));
-    v->type = LVAL_QEXPR;
-    v->count = 0;
-    v->cell = NULL;
-    return v;
+    return lval_new(LVAL_QEXPR);
 }
 
 void lval_del(lval* v) {
@@ -174,8 +176,7 @@ lval* lval_add(lval* v, lval* x) {
 }
 
 lval* lval_copy(lval* v) {
-    lval* x = malloc(sizeof(lval));
-    x->type = v->type;
+    lval* x = lval_new(v->type);
 
     switch (v->type) {
         case LVAL_FUN:
