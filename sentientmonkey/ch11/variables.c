@@ -113,16 +113,14 @@ lval* lval_fun(char* s, lbuiltin func) {
     lval* v = malloc(sizeof(lval));
     v->type = LVAL_FUN;
     v->fun = func;
-    v->fname = malloc(strlen(s) + 1);
-    strcpy(v->fname, s);
+    v->fname = strdup(s);
     return v;
 }
 
 lval* lval_sym(char* s) {
     lval* v = malloc(sizeof(lval));
     v->type = LVAL_SYM;
-    v->sym = malloc(strlen(s) + 1);
-    strcpy(v->sym, s);
+    v->sym = strdup(s);
     return v;
 }
 
@@ -182,8 +180,7 @@ lval* lval_copy(lval* v) {
     switch (v->type) {
         case LVAL_FUN:
             x-> fun = v->fun;
-            x->fname = malloc(strlen(v->fname + 1));
-            strcpy(x->fname, v->fname);
+            x->fname = strdup(v->fname);
             break;
         case LVAL_NUM:
             x->num = v->num;
@@ -192,12 +189,10 @@ lval* lval_copy(lval* v) {
             x->dub = v->dub;
             break;
         case LVAL_ERR:
-            x->err = malloc(strlen(v->err + 1));
-            strcpy(x->err, v->err);
+            x->err = strdup(v->err);
             break;
         case LVAL_SYM:
-            x->sym = malloc(strlen(v->sym + 1));
-            strcpy(x->sym, v->sym);
+            x->sym = strdup(v->sym);
             break;
         case LVAL_SEXPR:
         case LVAL_QEXPR:
@@ -393,8 +388,7 @@ void lenv_put(lenv* e, lval* k, lval* v) {
     e->syms = realloc(e->syms, sizeof(char*) * e->count);
 
     e->vals[e->count-1] = lval_copy(v);
-    e->syms[e->count-1] = malloc(strlen(k->sym)+1);
-    strcpy(e->syms[e->count-1], k->sym);
+    e->syms[e->count-1] = strdup(k->sym);
 }
 
 lval* builtin_op_num(lval* x, char* op, lval* y) {
