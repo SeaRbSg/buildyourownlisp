@@ -23,6 +23,11 @@
        "Function '%s' passed incorrect type. Got %s, Expected %s", \
        func, ltype_name(arg->type), ltype_name(t));
 
+#define LCHECK_ALL_TYPES(func, arg, t) \
+    for (int i=0; i < arg->count; i++) { \
+        LCHECK_TYPE(func, arg->cell[i], t); \
+    }
+
 #define LCHECK_COUNT(func, arg, n) \
    LCHECK(arg, (arg->count == n), \
        "Function '%s' passed incorrect number of arguments! Got %i, Expected %i.", \
@@ -588,9 +593,7 @@ lval* builtin_eval(lenv* e, lval* a) {
 lval* lval_join(lval* x, lval* y);
 
 lval* builtin_join(lenv* e, lval* a) {
-    for (int i=0; i < a->count; i++) {
-        LCHECK_TYPE("join", a->cell[i], LVAL_QEXPR);
-    }
+    LCHECK_ALL_TYPES("join", a, LVAL_QEXPR);
 
     lval* x = lval_pop(a, 0);
 
@@ -663,11 +666,7 @@ lval* builtin_def(lenv* e, lval* a) {
     LCHECK_TYPE("def", a->cell[0], LVAL_QEXPR);
 
     lval* syms = a->cell[0];
-
-    for (int i=0; i < syms->count; i++) {
-        LCHECK(a, (syms->cell[i]->type == LVAL_SYM), "Function 'def' cannot define non-symbol!");
-    }
-
+    LCHECK_ALL_TYPES("def", syms, LVAL_SYM);
     LCHECK(a, (syms->count == a->count-1), "Function 'def' cannot define incorrect number of values to symbols!");
 
     for (int i=0; i < syms->count; i++) {
@@ -683,10 +682,7 @@ lval* builtin_env(lenv* e, lval* a) {
     LCHECK_TYPE("env", a->cell[0], LVAL_QEXPR);
 
     lval* syms = a->cell[0];
-
-    for (int i=0; i < syms->count; i++) {
-        LCHECK(a, (syms->cell[i]->type == LVAL_SYM), "Function 'env' cannot describe non-symbol!");
-    }
+    LCHECK_ALL_TYPES("env", syms, LVAL_SYM);
 
     if (syms->count == 0) {
         lenv_print(e);
