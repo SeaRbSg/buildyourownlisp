@@ -425,7 +425,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
   }
 
   lval* result = f->fun(e, v);
-  lval_del(v);
+  lval_del(f);
   return result;
 }
 
