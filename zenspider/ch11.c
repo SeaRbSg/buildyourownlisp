@@ -23,6 +23,9 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
 #define LERR_CONS_ARITY     "Function 'cons' passed wrong number of arguments"
 #define LERR_CONS_TYPE      "Function 'cons' passed incorrect type on tail"
 #define LERR_ENV_GET        "Unbound symbol"
+#define LERR_DEF_TYPE       "Function 'def' passed incorrect type"
+#define LERR_DEF_ARITY      "Function 'def' cannot define non-symbol"
+#define LERR_DEF_SUBTYPE    "Function 'def' has an arity mismatch"
 
 struct lval;
 struct lenv;
@@ -131,6 +134,7 @@ lval *lval_read(mpc_ast_t *t);
 lval *lval_read_num(mpc_ast_t *t);
 lval *builtin_add(lenv *e, lval *a);
 lval *builtin_cons(lenv *e, lval *a);
+lval *builtin_def(lenv *e, lval *a);
 lval *builtin_div(lenv *e, lval *a);
 lval *builtin_eval(lenv *e, lval *a);
 lval *builtin_exp(lenv *e, lval *a);
@@ -380,6 +384,8 @@ void lenv_add_builtin(lenv *e, char *name, lbuiltin *func) {
 }
 
 void lenv_add_builtins(lenv *e) {
+  lenv_add_builtin(e, "def", builtin_def);
+
   lenv_add_builtin(e, "list", builtin_list);
   lenv_add_builtin(e, "head", builtin_head);
   lenv_add_builtin(e, "tail", builtin_tail);
@@ -499,6 +505,24 @@ lval* builtin_cons(lenv* e, lval* a) {
   lval* s = lval_pop(a, 0);
 
   return lval_cons(x, s);
+}
+
+lval* builtin_def(lenv* e, lval* a) {
+  lval* syms = L_CELL_N(a, 0);
+
+  if (L_TYPE_N(a, 0) != LVAL_QEXP)     RETURN_ERR(a, LERR_DEF_TYPE);
+  if (L_COUNT(syms) != L_COUNT(a)-1)   RETURN_ERR(a, LERR_DEF_ARITY);
+  FOREACH_SEXP(i, syms) {
+    if (L_TYPE_N(syms, i) != LVAL_SYM) RETURN_ERR(a, LERR_DEF_SUBTYPE);
+  }
+
+  FOREACH_SEXP(i, syms) {
+    lenv_put(e, L_CELL_N(syms, i), L_CELL_N(a, i+1));
+  }
+
+  lval_del(a);
+
+  return lval_sexp();
 }
 
 lval* builtin_div(lenv *e, lval *a) {
