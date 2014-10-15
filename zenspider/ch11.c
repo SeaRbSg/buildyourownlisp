@@ -5,27 +5,16 @@
 
 enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
 
-#define LERR_DIV_ZERO       "Division by zero"
-#define LERR_BAD_OP         "Invalid operator"
+#define LERR_ARITY "Function '%s' passed wrong number of arguments. %d != %d."
 #define LERR_BAD_NUM        "Invalid number"
 #define LERR_BAD_SEXP       "S-expression doesn't start with a symbol"
 #define LERR_NON_NUMBER     "Cannot operate on non-number"
-#define LERR_HEAD_ARITY     "Function 'head' passed too many args"
-#define LERR_HEAD_TYPE      "Function 'head' passed incorrect types"
 #define LERR_HEAD_EMPTY     "Function 'head' passed empty list"
-#define LERR_TAIL_ARITY     "Function 'tail' passed too many args"
-#define LERR_TAIL_TYPE      "Function 'tail' passed incorrect types"
 #define LERR_TAIL_EMPTY     "Function 'tail' passed empty list"
-#define LERR_JOIN_TYPE      "Function 'join' passed incorrect type"
 #define LERR_BUILTIN_LOOKUP "Unknown function"
-#define LERR_EVAL_ARITY     "Function 'eval' passed too many arguments"
-#define LERR_EVAL_TYPE      "Function 'eval' passed incorrect type"
-#define LERR_CONS_ARITY     "Function 'cons' passed wrong number of arguments"
-#define LERR_CONS_TYPE      "Function 'cons' passed incorrect type on tail"
-#define LERR_ENV_GET        "Unbound symbol"
-#define LERR_DEF_TYPE       "Function 'def' passed incorrect type"
+#define LERR_ENV_GET        "Unbound symbol: %s"
 #define LERR_DEF_ARITY      "Function 'def' cannot define non-symbol"
-#define LERR_DEF_SUBTYPE    "Function 'def' has an arity mismatch"
+#define LERR_TYPE "Function '%s' passed incorrect type. %s != %s"
 
 struct lval;
 struct lenv;
@@ -80,6 +69,20 @@ typedef struct lenv {
 #define LOOKUP(a, b) strcmp((a), (b)) == 0
 #define SUBSTR(a, b) strstr((a), (b))
 
+#define CHECK_ARITY(f, v, n)                           \
+  if (L_COUNT(v) != n) {                               \
+    lval_del(v);                                       \
+    return lval_err(LERR_ARITY, (f), (n), L_COUNT(v)); \
+  }
+
+#define CHECK_TYPE(f, v, n, t)                      \
+  if (L_TYPE_N(v, n) != (t)) {                      \
+    lval_del(a);                                    \
+    return lval_err(LERR_TYPE, (f),                 \
+                    lval_type_name(L_TYPE_N(v, n)), \
+                    lval_type_name(t));             \
+  }
+
 #define CHECK_FOR_NUMBERS(a)          \
   FOREACH_SEXP(i, a) {                \
     if (L_TYPE_N(a, i) != LVAL_NUM) { \
@@ -105,7 +108,7 @@ typedef struct lenv {
 
 /* ch11.c */
 lval *lval_new(void);
-lval *lval_err(char *m);
+lval *lval_err(char *fmt, ...);
 lval *lval_fun(lbuiltin *func);
 lval *lval_num(long x);
 lval *lval_qexp(void);
@@ -149,6 +152,7 @@ lval *builtin_mul(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
 
+char *lval_type_name(int t);
 long count_leaves(mpc_ast_t *t);
 void lval_print(lval *v);
 void lval_print_expr(lval *v, char open, char close);
@@ -167,10 +171,16 @@ lval* lval_new() {
   return v;
 }
 
-lval* lval_err(char* m) {
+lval* lval_err(char* fmt, ...) {
+  va_list va;
+
   lval* v = lval_new();
   L_TYPE(v) = LVAL_ERR;
-  L_ERR(v) = strdup(m);
+
+  va_start(va, fmt);
+  vasprintf(&L_ERR(v), fmt, va);
+  va_end(va);
+
   return v;
 }
 
@@ -344,7 +354,7 @@ lval* lenv_get(lenv* e, lval* k) {
     }
   }
 
-  return lval_err(LERR_ENV_GET);
+  return lval_err(LERR_ENV_GET, L_SYM(k));
 }
 
 void lenv_put(lenv* e, lval* k, lval* v) {
@@ -498,8 +508,8 @@ lval* builtin_add(lenv *e, lval *a) {
 }
 
 lval* builtin_cons(lenv* e, lval* a) {
-  if (L_COUNT(a) != 2)             RETURN_ERR(a, LERR_CONS_ARITY);
-  if (L_TYPE_N(a, 1) != LVAL_QEXP) RETURN_ERR(a, LERR_CONS_TYPE);
+  CHECK_ARITY("cons", a, 2);
+  CHECK_TYPE("cons", a, 1, LVAL_QEXP);
 
   lval* x = lval_pop(a, 0);
   lval* s = lval_pop(a, 0);
@@ -510,10 +520,10 @@ lval* builtin_cons(lenv* e, lval* a) {
 lval* builtin_def(lenv* e, lval* a) {
   lval* syms = L_CELL_N(a, 0);
 
-  if (L_TYPE_N(a, 0) != LVAL_QEXP)     RETURN_ERR(a, LERR_DEF_TYPE);
+  CHECK_TYPE("def", a, 0, LVAL_QEXP);
   if (L_COUNT(syms) != L_COUNT(a)-1)   RETURN_ERR(a, LERR_DEF_ARITY);
   FOREACH_SEXP(i, syms) {
-    if (L_TYPE_N(syms, i) != LVAL_SYM) RETURN_ERR(a, LERR_DEF_SUBTYPE);
+    CHECK_TYPE("def (syms)", syms, i, LVAL_SYM);
   }
 
   FOREACH_SEXP(i, syms) {
@@ -532,8 +542,8 @@ lval* builtin_div(lenv *e, lval *a) {
 }
 
 lval* builtin_eval(lenv *e, lval* a) {
-  if (L_COUNT(a) != 1)             RETURN_ERR(a, LERR_EVAL_ARITY);
-  if (L_TYPE_N(a, 0) != LVAL_QEXP) RETURN_ERR(a, LERR_EVAL_TYPE);
+  CHECK_ARITY("eval", a, 1);
+  CHECK_TYPE("eval", a, 0, LVAL_QEXP);
 
   lval* x = lval_take(a, 0);
   L_TYPE(x) = LVAL_SEXP; // TODO: ARGH
@@ -548,8 +558,8 @@ lval* builtin_exp(lenv *e, lval *a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
-  if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_HEAD_ARITY);
-  if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_HEAD_TYPE);
+  CHECK_ARITY("head", a, 1);
+  CHECK_TYPE("head", a, 0, LVAL_QEXP);
   if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_HEAD_EMPTY);
 
   lval* v = lval_take(a, 0);
@@ -563,7 +573,7 @@ lval* builtin_head(lenv* e, lval* a) {
 
 lval* builtin_join(lenv* e, lval* a) {
   FOREACH_SEXP(i, a) {
-    if (L_TYPE_N(a, i) != LVAL_QEXP) RETURN_ERR(a, LERR_JOIN_TYPE);
+    CHECK_TYPE("join", a, i, LVAL_QEXP);
   }
 
   lval* x = lval_pop(a, 0);
@@ -638,8 +648,8 @@ lval* builtin_sub(lenv *e, lval *a) {
 }
 
 lval* builtin_tail(lenv* e, lval* a) {
-  if (L_COUNT(a) != 1)              RETURN_ERR(a, LERR_TAIL_ARITY);
-  if (L_TYPE_N(a, 0) != LVAL_QEXP)  RETURN_ERR(a, LERR_TAIL_TYPE);
+  CHECK_ARITY("tail", a, 1);
+  CHECK_TYPE("tail", a, 0, LVAL_QEXP);
   if (L_COUNT(L_CELL_N(a, 0)) == 0) RETURN_ERR(a, LERR_TAIL_EMPTY);
 
   lval* v = lval_take(a, 0);
@@ -652,6 +662,18 @@ lval* builtin_tail(lenv* e, lval* a) {
 /*
  * Main & Side effect free
  */
+
+char* lval_type_name(int t) {
+  switch (t) {
+  case LVAL_FUN: return "function";
+  case LVAL_NUM: return "number";
+  case LVAL_ERR: return "error";
+  case LVAL_SYM: return "symbol";
+  case LVAL_SEXP: return "sexp";
+  case LVAL_QEXP: return "qexp";
+  default: return "unknown";
+  }
+}
 
 long count_leaves(mpc_ast_t* t) { // TODO remove me or hook me in
   long max = t->children_num;
