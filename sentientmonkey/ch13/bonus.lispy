@@ -1,0 +1,24 @@
+def {fun} (\ {args body} {def (head args) (\ (tail args) body)})
+fun {add-together x y} {+ x y}
+fun {unpack f xs} {eval (join (list f) xs)}
+fun {pack f & xs} {f xs}
+def {uncurry} pack
+def {curry} unpack
+curry + {5 6 7}
+uncurry head 5 6 7
+def {add-uncurried} +
+def {add-curried} (curry +)
+add-curried {5 6 7}
+add-uncurried 5 6 7
+
+fun {first l} {head l}
+first {1 2 3 4}
+
+fun {second l} {first (tail l)}
+second {1 2 3 4}
+
+fun {flip f x y} {f y x}
+flip / 1 12
+
+fun {map f g x} {g (f x)}
+map tail head {1 2 3 4}
