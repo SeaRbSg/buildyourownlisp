@@ -926,24 +926,6 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
             break;
         }
 
-        /* if '&' remains in formal list it should be bound to empty list */
-        if (f->formals->count > 0 &&
-                STR_EQ(f->formals->cell[0]->sym, "&")) {
-
-            if (f->formals->count != 2) {
-                return lval_err("Function formal invalid. Symbol '&' not followed by single symbol.");
-            }
-
-            lval_del(lval_pop(f->formals, 0));
-
-            lval* sym = lval_pop(f->formals, 0);
-            lval* val = lval_qexpr();
-
-            lenv_put(f->env, sym, val);
-            lval_del(sym);
-            lval_del(val);
-        }
-
         lval* val = lval_pop(a, 0);
         lenv_put(f->env, sym, val);
 
@@ -952,6 +934,24 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     }
 
     lval_del(a);
+
+    /* if '&' remains in formal list it should be bound to empty list */
+    if (f->formals->count > 0 &&
+            STR_EQ(f->formals->cell[0]->sym, "&")) {
+
+        if (f->formals->count != 2) {
+            return lval_err("Function formal invalid. Symbol '&' not followed by single symbol.");
+        }
+
+        lval_del(lval_pop(f->formals, 0));
+
+        lval* sym = lval_pop(f->formals, 0);
+        lval* val = lval_qexpr();
+
+        lenv_put(f->env, sym, val);
+        lval_del(sym);
+        lval_del(val);
+    }
 
     if (f->formals->count == 0) {
         f->env->parent = e;
