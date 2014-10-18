@@ -854,17 +854,34 @@ lval* builtin_ord(lenv* e, lval* a, char* op) {
     int result;
 
     if STR_EQ(op, ">") {
-        result = (x->num > y->num) ? 1 : 0;
+        result = (x->num > y->num);
     } else if STR_EQ(op, "<") {
-        result = (x->num < y->num) ? 1 : 0;
+        result = (x->num < y->num);
     } else if STR_EQ(op, ">=") {
-        result = (x->num >= y->num) ? 1 : 0;
+        result = (x->num >= y->num);
     } else if STR_EQ(op, "<=") {
-        result = (x->num <= y->num) ? 1 : 0;
+        result = (x->num <= y->num);
+    } else if STR_EQ(op, "||") {
+        result = (x->num || y->num);
+    } else if STR_EQ(op, "&&") {
+        result = (x->num && y->num);
     } else {
         lval_del(a);
         return lval_err("Unknown operator!");
     }
+
+    lval_del(a);
+
+    return lval_num(result);
+}
+
+lval* builtin_not(lenv* e, lval* a) {
+    LCHECK_COUNT("!", a, 1);
+    LCHECK_TYPE("!", a->cell[0], LVAL_NUM);
+
+    lval* x = lval_pop(a, 0);
+
+    int result = !x->num;
 
     lval_del(a);
 
@@ -886,6 +903,15 @@ lval* builtin_gte(lenv* e, lval* a) {
 lval* builtin_lte(lenv* e, lval* a) {
     return builtin_ord(e, a, "<=");
 }
+
+lval* builtin_or(lenv* e, lval* a) {
+    return builtin_ord(e, a, "||");
+}
+
+lval* builtin_and(lenv *e, lval* a) {
+    return builtin_ord(e, a, "&&");
+}
+
 
 lval* builtin_eq(lenv* e, lval* a) {
     LCHECK_COUNT("==", a, 2);
@@ -954,6 +980,9 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "<", builtin_lt);
     lenv_add_builtin(e, ">=", builtin_gte);
     lenv_add_builtin(e, "<=", builtin_lte);
+    lenv_add_builtin(e, "||", builtin_or);
+    lenv_add_builtin(e, "&&", builtin_and);
+    lenv_add_builtin(e, "!", builtin_not);
     lenv_add_builtin(e, "==", builtin_eq);
     lenv_add_builtin(e, "!=", builtin_neq);
     lenv_add_builtin(e, "if", builtin_if);
@@ -1109,7 +1138,7 @@ int main(int argc, char** argv) {
             "                                                                  \
             double   : /-?[0-9]+\\.[0-9]+/ ;                                   \
             number   : /-?[0-9]+/ ;                                            \
-            symbol   : /[a-zA-Z0-9_+i\\-*\\/%^\\\\=<>!&]+/;                    \
+            symbol   : /[a-zA-Z0-9_+i\\-*\\/%^\\\\=<>!&|]+/;                   \
             sexpr    : '(' <expr>* ')';                                        \
             qexpr    : '{' <expr>* '}';                                        \
             expr     : <double> | <number> | <symbol> | <sexpr> | <qexpr> ;    \
