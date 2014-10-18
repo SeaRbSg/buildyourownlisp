@@ -1,0 +1,10 @@
+def {fun} (\ {args body} {def (head args) (\ (tail args) body)})
+env {len}
+(fun {len l} { if (== l {}) {0} {+ 1 (len (tail l))} })
+(fun {reverse l} { if (== l {}) {{}} {join (reverse (tail l)) (head l)} })
+
+env {len}
+def {x} {1 2 3 4 5}
+len x
+env {reverse}
+reverse x
