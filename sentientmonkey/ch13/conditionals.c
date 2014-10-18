@@ -248,6 +248,42 @@ lval* lval_copy(lval* v) {
     return x;
 }
 
+int lval_eq(lval* x, lval* y) {
+    if (x->type != y->type) {
+        return 0;
+    } else {
+        switch(x->type) {
+            case LVAL_NUM:
+                return (x->num == y->num);
+            case LVAL_DUB:
+                return (x->dub == y->dub);
+            case LVAL_ERR:
+                return STR_EQ(x->err, y->err);
+            case LVAL_SYM:
+                return STR_EQ(x->sym, y->sym);
+            case LVAL_FUN:
+                if (x->builtin || y->builtin) {
+                    return (x->builtin == y->builtin);
+                } else {
+                    return (lval_eq(x->formals, y->formals) &&
+                            lval_eq(x->body, y->body));
+                }
+            case LVAL_SEXPR:
+            case LVAL_QEXPR:
+                if (x->count != y->count) {
+                    return 0;
+                }
+                for (int i=0; i < x->count; i++) {
+                    if (!lval_eq(x->cell[i], y->cell[i])) {
+                        return 0;
+                    }
+                }
+                return 1;
+        }
+    }
+    return 0;
+}
+
 lval* lval_read_num(mpc_ast_t* t) {
     errno = 0;
     long x = strtol(t->contents, NULL, 10);
@@ -851,6 +887,25 @@ lval* builtin_lte(lenv* e, lval* a) {
     return builtin_ord(e, a, "<=");
 }
 
+lval* builtin_eq(lenv* e, lval* a) {
+    LCHECK_COUNT("==", a, 2);
+
+    lval* x = lval_pop(a, 0);
+    lval* y = lval_pop(a, 0);
+
+    int result = lval_eq(x, y);
+
+    lval_del(a);
+
+    return lval_num(result);
+}
+
+lval* builtin_neq(lenv* e, lval* a) {
+    lval* result = builtin_eq(e, a);
+    result->num = !result->num;
+    return result;
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
     lval* k = lval_sym(name);
     lval* v = lval_fun(name, func);
@@ -874,6 +929,8 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "<", builtin_lt);
     lenv_add_builtin(e, ">=", builtin_gte);
     lenv_add_builtin(e, "<=", builtin_lte);
+    lenv_add_builtin(e, "==", builtin_eq);
+    lenv_add_builtin(e, "!=", builtin_neq);
 
     /* List functions */
     lenv_add_builtin(e, "list", builtin_list);
