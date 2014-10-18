@@ -906,6 +906,31 @@ lval* builtin_neq(lenv* e, lval* a) {
     return result;
 }
 
+lval* builtin_if(lenv* e, lval* a) {
+    LCHECK_COUNT("if", a, 3);
+    LCHECK_TYPE("if", a->cell[0], LVAL_NUM);
+    LCHECK_TYPE("if", a->cell[1], LVAL_QEXPR);
+    LCHECK_TYPE("if", a->cell[2], LVAL_QEXPR);
+
+    lval* cond = lval_pop(a, 0);
+    lval* left = lval_pop(a, 0);
+    lval* right = lval_pop(a, 0);
+
+    left->type = LVAL_SEXPR;
+    right->type = LVAL_SEXPR;
+
+    lval* result;
+    if (cond->num) {
+        result = lval_eval(e, left);
+    } else {
+        result = lval_eval(e, right);
+    }
+
+    lval_del(a);
+
+    return result;
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
     lval* k = lval_sym(name);
     lval* v = lval_fun(name, func);
@@ -931,6 +956,7 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "<=", builtin_lte);
     lenv_add_builtin(e, "==", builtin_eq);
     lenv_add_builtin(e, "!=", builtin_neq);
+    lenv_add_builtin(e, "if", builtin_if);
 
     /* List functions */
     lenv_add_builtin(e, "list", builtin_list);
