@@ -1,24 +1,54 @@
 def {fun} (\ {args body} {def (head args) (\ (tail args) body)})
-fun {add-together x y} {+ x y}
-fun {unpack f xs} {eval (join (list f) xs)}
-fun {pack f & xs} {f xs}
-def {uncurry} pack
-def {curry} unpack
-curry + {5 6 7}
-uncurry head 5 6 7
-def {add-uncurried} +
-def {add-curried} (curry +)
-add-curried {5 6 7}
-add-uncurried 5 6 7
 
-fun {first l} {head l}
-first {1 2 3 4}
+(fun {nth n l} { if (== n 1) {eval (head l)} {nth (- n 1) (tail l)} })
 
-fun {second l} {first (tail l)}
-second {1 2 3 4}
+def {a} {1 2 3 4}
+(nth 1 a)
+(nth 4 a)
+(nth 0 a)
+(nth 5 a)
 
-fun {flip f x y} {f y x}
-flip / 1 12
+(fun {mem? x l} { if (== l {}) {0} {if (== x (eval (head l))) {1} {mem? x (tail l)} }})
 
-fun {map f g x} {g (f x)}
-map tail head {1 2 3 4}
+(mem? 1 a)
+(mem? 4 a)
+(mem? 1 {})
+(mem? -3 a)
+
+(fun {last l} { if (== (tail l) {}) {(eval (head l))} {last (tail l)} })
+
+(last a)
+(last {1})
+(last {})
+
+(fun {or x y} { if (== x 1) {1} {if (== y 1) {1} {0}} })
+
+def {b c} 3 5
+
+(or (== b 3) (== b 5))
+(or (== b 5) (== b 3))
+(or (== b 1) (== b 10))
+
+(fun {and x y} { if (== x 1) {if (== y 1) {1} {0}} {0} })
+
+(and (== b 3) (== c 5))
+(and (== b 5) (== c 5))
+(and (== b 3) (== c 3))
+(and (== b 10) (== c 10))
+
+(fun {not x} { if (== x 1) {0} {1} })
+
+(not (== b 3))
+(not (== b 5))
+
+(def {true} 1)
+(def {false} 0)
+
+true
+false
+
+(def {q p} true false)
+
+(and true false)
+(or true false)
+(not true)

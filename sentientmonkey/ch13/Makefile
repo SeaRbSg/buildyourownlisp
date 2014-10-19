@@ -12,5 +12,8 @@ run: conditionals
 recursive: conditionals
 	./conditionals < recursive.lispy
 
+bonus: conditionals
+	./conditionals < bonus.lispy
+
 clean:
 	rm -Rf conditionals

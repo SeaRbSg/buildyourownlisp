@@ -1138,7 +1138,7 @@ int main(int argc, char** argv) {
             "                                                                  \
             double   : /-?[0-9]+\\.[0-9]+/ ;                                   \
             number   : /-?[0-9]+/ ;                                            \
-            symbol   : /[a-zA-Z0-9_+i\\-*\\/%^\\\\=<>!&|]+/;                   \
+            symbol   : /[a-zA-Z0-9_+i\\-*\\/%^\\\\=<>!\?&|]+/;                 \
             sexpr    : '(' <expr>* ')';                                        \
             qexpr    : '{' <expr>* '}';                                        \
             expr     : <double> | <number> | <symbol> | <sexpr> | <qexpr> ;    \
