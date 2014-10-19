@@ -47,27 +47,6 @@ typedef struct lenv lenv;
 /* creating enums without typedef feels wrong, so I added them. */
 typedef enum { LVAL_ERR, LVAL_NUM, LVAL_DUB, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR } lval_type_t;
 
-char* ltype_name(lval_type_t t) {
-    switch(t) {
-        case LVAL_FUN:
-            return "Function";
-        case LVAL_DUB:
-            return "Double";
-        case LVAL_NUM:
-            return "Number";
-        case LVAL_ERR:
-            return "Error";
-        case LVAL_SYM:
-            return "Symbol";
-        case LVAL_SEXPR:
-            return "S-Expression";
-        case LVAL_QEXPR:
-            return "Q-Expression";
-        default:
-            return "Unknown";
-    }
-}
-
 typedef lval*(*lbuiltin)(lenv*, lval*);
 
 struct lval {
@@ -90,6 +69,102 @@ struct lval {
     int count;
     lval** cell;
 };
+
+/* protos */
+char *ltype_name(lval_type_t t);
+lval *lval_new(lval_type_t type);
+lval *lval_num(long x);
+lval *lval_dub(double x);
+lval *lval_err(char *fmt, ...);
+lval *lval_fun(char *s, lbuiltin builtin);
+lval *lval_lambda(lval *formals, lval *body);
+lval *lval_sym(char *s);
+lval *lval_sexpr(void);
+lval *lval_qexpr(void);
+void lval_del(lval *v);
+lval *lval_add(lval *v, lval *x);
+lval *lval_copy(lval *v);
+int lval_eq(lval *x, lval *y);
+lval *lval_read_num(mpc_ast_t *t);
+lval *lval_read_dub(mpc_ast_t *t);
+lval *lval_read(mpc_ast_t *t);
+void lval_expr_print(lval *v, char open, char close);
+void lval_print(lval *v);
+void lval_println(lval *v);
+lval *lval_pop(lval *v, int i);
+lval *lval_take(lval *v, int i);
+lenv *lenv_new(void);
+lenv *lenv_copy(lenv *e);
+void lenv_del(lenv *e);
+void lenv_print_val(char *sym, lval *v);
+void lenv_print(lenv *e);
+lval *lenv_get(lenv *e, lval *k);
+void lenv_put(lenv *e, lval *k, lval *v);
+void lenv_def(lenv *e, lval *k, lval *v);
+lval *builtin_op_num(lval *x, char *op, lval *y);
+lval *builtin_op_dub(lval *x, char *op, lval *y);
+lval *coerce_num_to_dub(lval *n);
+lval *builtin_op(lenv *e, lval *a, char *op);
+lval *builtin_add(lenv *e, lval *a);
+lval *builtin_sub(lenv *e, lval *a);
+lval *builtin_mul(lenv *e, lval *a);
+lval *builtin_div(lenv *e, lval *a);
+lval *builtin_mod(lenv *e, lval *a);
+lval *builtin_pow(lenv *e, lval *a);
+lval *builtin_min(lenv *e, lval *a);
+lval *builtin_max(lenv *e, lval *a);
+lval *builtin_head(lenv *e, lval *a);
+lval *builtin_tail(lenv *e, lval *a);
+lval *builtin_list(lenv *e, lval *a);
+lval *builtin_eval(lenv *e, lval *a);
+lval *builtin_join(lenv *e, lval *a);
+lval *lval_join(lval *x, lval *y);
+lval *builtin_cons(lenv *e, lval *a);
+lval *builtin_len(lenv *e, lval *a);
+lval *builtin_init(lenv *e, lval *a);
+lval *builtin_env(lenv *e, lval *a);
+lval *builtin_exit(lenv *e, lval *a);
+lval *builtin_lambda(lenv *e, lval *a);
+lval *builtin_var(lenv *e, lval *a, char *func);
+lval *builtin_def(lenv *e, lval *a);
+lval *builtin_put(lenv *e, lval *a);
+lval *builtin_ord(lenv *e, lval *a, char *op);
+lval *builtin_not(lenv *e, lval *a);
+lval *builtin_gt(lenv *e, lval *a);
+lval *builtin_lt(lenv *e, lval *a);
+lval *builtin_gte(lenv *e, lval *a);
+lval *builtin_lte(lenv *e, lval *a);
+lval *builtin_or(lenv *e, lval *a);
+lval *builtin_and(lenv *e, lval *a);
+lval *builtin_eq(lenv *e, lval *a);
+lval *builtin_neq(lenv *e, lval *a);
+lval *builtin_if(lenv *e, lval *a);
+void lenv_add_builtin(lenv *e, char *name, lbuiltin func);
+void lenv_add_builtins(lenv *e);
+lval *lval_eval_sexpr(lenv *e, lval *v);
+lval *lval_eval(lenv *e, lval *v);
+lval *lval_call(lenv *e, lval *f, lval *a);
+
+char* ltype_name(lval_type_t t) {
+    switch(t) {
+        case LVAL_FUN:
+            return "Function";
+        case LVAL_DUB:
+            return "Double";
+        case LVAL_NUM:
+            return "Number";
+        case LVAL_ERR:
+            return "Error";
+        case LVAL_SYM:
+            return "Symbol";
+        case LVAL_SEXPR:
+            return "S-Expression";
+        case LVAL_QEXPR:
+            return "Q-Expression";
+        default:
+            return "Unknown";
+    }
+}
 
 lval* lval_new(lval_type_t type) {
     lval* v = malloc(sizeof(lval));
@@ -143,10 +218,6 @@ lval* lval_fun(char* s, lbuiltin builtin) {
     v->fname = strdup(s);
     return v;
 }
-
-lenv* lenv_new(void);
-void lenv_del(lenv* e);
-lenv* lenv_copy(lenv* e);
 
 lval* lval_lambda(lval* formals, lval* body) {
     lval* v = lval_new(LVAL_FUN);
@@ -341,8 +412,6 @@ lval* lval_read(mpc_ast_t* t) {
 
     return x;
 }
-
-void lval_print(lval* v);
 
 void lval_expr_print(lval* v, char open, char close) {
     putchar(open);
@@ -686,9 +755,6 @@ lval* builtin_list(lenv* e, lval* a) {
     return a;
 }
 
-// forward dec
-lval* lval_eval(lenv* e, lval* v);
-
 lval* builtin_eval(lenv* e, lval* a) {
     LCHECK_COUNT("eval", a, 1);
     LCHECK_TYPE("eval", a->cell[0], LVAL_QEXPR);
@@ -697,9 +763,6 @@ lval* builtin_eval(lenv* e, lval* a) {
     x->type = LVAL_SEXPR;
     return lval_eval(e, x);
 }
-
-// forward dec
-lval* lval_join(lval* x, lval* y);
 
 lval* builtin_join(lenv* e, lval* a) {
     LCHECK_ALL_TYPES("join", a, LVAL_QEXPR);
@@ -1007,8 +1070,6 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "min", builtin_min);
     lenv_add_builtin(e, "max", builtin_max);
 }
-
-lval* lval_call(lenv* e, lval* f, lval* a);
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
 
