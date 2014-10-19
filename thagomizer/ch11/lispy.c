@@ -11,8 +11,11 @@
     "Function '%s' passed incorrect type for argument %i. Got %s, Expected %s.", \
     func, index, ltype_name(args->cell[index]->type), ltype_name(expect))
 
-#define LEMPTYLIST(args, name) LASSERT(args, ((args)->cell[0]->count != 0), "Function %s passed the empty list!", (name))
-#define LARGCOUNT(args, numargs, name) LASSERT(args, ((args)->count == (numargs)), "Function %s passed incorrect number of arguments. Got %i, Expected %i.", (name), (args)->count, (numargs))
+#define LASSERT_EMPTY(func, args) \
+  LASSERT(args, ((args)->cell[0]->count != 0), "Function %s passed the empty list!", func)
+
+#define LASSERT_ARG_COUNT(func, args, expected) \
+  LASSERT(args, ((args)->count == (expected)), "Function %s passed incorrect number of arguments. Got %i, Expected %i.", func, (args)->count, (expected))
 
 /** Forward Declarations **/
 struct lval; 
@@ -63,6 +66,7 @@ lenv *lenv_new(void);
 void lenv_del(lenv *e);
 lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
+lval *builtin_exit(lenv *e, lval *a);
 lval *builtin_list(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
@@ -379,8 +383,8 @@ lval* builtin_list(lenv *e, lval *a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
-  LARGCOUNT(a, 1, "head");
-  LEMPTYLIST(a, "head");
+  LASSERT_ARG_COUNT("head", a, 1);
+  LASSERT_EMPTY("head", a);
   LASSERT_TYPE("head", a, 0, LVAL_QEXPR);
 
   lval* v = lval_take(a, 0);
@@ -393,9 +397,9 @@ lval* builtin_head(lenv* e, lval* a) {
 }
 
 lval* builtin_tail(lenv* e, lval* a) {
-  LARGCOUNT(a, 1, "tail");
+  LASSERT_ARG_COUNT("tail", a, 1);
   LASSERT_TYPE("tail", a, 0, LVAL_QEXPR);
-  LEMPTYLIST(a, "tail");
+  LASSERT_EMPTY("tail", a);
 
   lval* v = lval_take(a, 0);
 
@@ -404,7 +408,7 @@ lval* builtin_tail(lenv* e, lval* a) {
 }
 
 lval* builtin_eval(lenv *e, lval *a) {
-  LARGCOUNT(a, 1, "eval");
+  LASSERT_ARG_COUNT("eval", a, 1);
   LASSERT_TYPE("eval", a, 0, LVAL_QEXPR);
 
   lval* x = lval_take(a, 0);
@@ -428,8 +432,8 @@ lval* builtin_join(lenv *e, lval *a) {
 }
 
 lval* builtin_cons(lenv *e, lval *a) {
-  LEMPTYLIST(a, "cons");
-  LARGCOUNT(a, 2, "cons");
+  LASSERT_EMPTY("cons", a);
+  LASSERT_ARG_COUNT("cons", a, 2);
 
   lval* v = lval_pop(a, 0);   /* value */
   lval* q = lval_pop(a, 0);   /* list I HATE THAT POP MUTATES*/
@@ -445,11 +449,15 @@ lval* builtin_cons(lenv *e, lval *a) {
 }
 
 lval* builtin_len(lenv *e, lval *a) {
-  LARGCOUNT(a, 1, "len");
+  LASSERT_ARG_COUNT("len", a, 1);
 
   lval* v = lval_take(a, 0);
 
   return lval_num(v->count);
+}
+
+lval* builtin_exit(lenv* e, lval* a) {
+  exit(0);
 }
 
 lval* builtin_op(lenv* e, lval* a, char* op) {
@@ -605,6 +613,9 @@ void lenv_add_builtins(lenv* e) {
 
   /* Variable Functions */
   lenv_add_builtin(e, "def", builtin_def);
+
+  /* Other Functions */
+  lenv_add_builtin(e, "exit", builtin_exit);
 }
 
 /* Evaluation */
