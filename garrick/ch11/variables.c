@@ -3,7 +3,12 @@
 #include <editline/readline.h>
 #include <editline/history.h>
 #include "mpc.h"
-#define LASSERT(args, cond, err) if (!(cond)) { lval_del(args); return lval_err(err); }
+#define LASSERT(args, cond, fmt, ...) \
+   if (!(cond)) { \
+   lval* err = lval_err(fmt, ##__VA_ARGS__); \
+   lval_del(args); \
+   return err; \
+   }
 
 /* enumeration of possible lval types */
 enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
@@ -19,7 +24,7 @@ lval* lval_pop(lval* v, int i);
 lval* lval_take(lval* v, int i);
 lval* lval_eval(lenv* e, lval* v);
 lval* lval_copy(lval* v);
-lval* lval_err(char* m);
+lval* lval_err(char* fmt, ...);
 lval* builtin(lval* a, char* func);
 lval* builtin_op(lenv* e, lval* a, char* op);
 lval* lval_join(lval* x, lval* y);
@@ -44,6 +49,18 @@ struct lenv {
   char** syms;
   lval** vals;
 };
+
+char* ltype_name(int t) {
+  switch(t) {
+    case LVAL_FUN:   return "Function";
+    case LVAL_NUM:   return "Number";
+    case LVAL_ERR:   return "Error";
+    case LVAL_SYM:   return "Symbol";
+    case LVAL_SEXPR: return "S-Expression";
+    case LVAL_QEXPR: return "Q-Expression";
+    default:         return "Unknown";
+  }
+}
 
 lenv* lenv_new(void) {
   lenv* e = malloc(sizeof(lenv));
@@ -73,7 +90,7 @@ lval* lenv_get(lenv* e, lval* k) {
     }
   }
   /* If no symbol found, return error */
-  return lval_err("unbound symbol!");
+  return lval_err("Unbound symbol! %s", k->sym);
 }
 
 void lenv_put(lenv* e, lval* k, lval* v) {
@@ -113,11 +130,25 @@ lval* lval_num(long x) {
 }
 
 /* pointer to new error type lval */
-lval* lval_err(char* m) {
+lval* lval_err(char* fmt, ...) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_ERR;
-  v->err = malloc(strlen(m) + 1);
-  strcpy(v->err, m);
+  /* create a va list and initialize it */
+  va_list va;
+  va_start(va, fmt);
+
+  /* allocate 512 bytes of space */
+  v->err = malloc(512);
+
+  /* printf into the error string w/ a max of 511 chars */
+  vsnprintf(v->err, 511, fmt, va);
+
+  /* realloc to number of bytes actually needed */
+  v->err = realloc(v->err, strlen(v->err)+1);
+
+  /* clean up our va list */
+  va_end(va);
+
   return v;
 }
 
@@ -215,9 +246,7 @@ lval* lval_read(mpc_ast_t* t) {
 void lval_expr_print(lval* v, char open, char close) {
   putchar(open);
   for (int i = 0; i < v->count; i++) {
-    /* */
     lval_print(v->cell[i]);
-
     if (i != (v->count-1)) {
       putchar(' ');
     }
@@ -364,8 +393,8 @@ lval* lval_take(lval* v, int i) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
-  LASSERT(a, (a->count == 1), "Function 'head' passed too many arguments!");
-  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'head' passed incorrect types!");
+  LASSERT(a, (a->count == 1), "Function 'head' passed too many arguments! Expected %i, got %i", a->count, 1);
+  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'head' passed incorrect types.  Got %s, expected %s", ltype_name(a->cell[0]->type), ltype_name(LVAL_QEXPR) );
   LASSERT(a, a->cell[0]->count != 0, "Function 'head' passed {}!"); 
 
   /* Otherwise take the first argument */
@@ -487,6 +516,29 @@ lval* builtin_op(lenv* e, lval* a, char* op) {
   return x;
 }
 
+lval* builtin_def(lenv* e, lval* a ) {
+  LASSERT(a, (a->cell[0]->type == LVAL_QEXPR), "Function 'def' passed incorrect type!");
+
+  /* First argument is a symbol list */ 
+  lval* syms = a->cell[0];
+
+  /* Ensure all elements of first list are symbols */
+  for (int i = 0; i < syms->count; i++) {
+    LASSERT(a, (syms->cell[i]->type == LVAL_SYM), "Function 'def' can not define a non-symbol!");
+  }
+
+  /* Check correct number of symbols and values */
+  LASSERT(a, (syms->count == a->count-1), "Function 'def' can not define incorrect incorrect number of values to symbols");
+
+  /* Assign copies of values to symbols */
+  for (int i = 0; i < syms->count; i++) {
+    lenv_put(e, syms->cell[i], a->cell[i+1]);
+  }
+
+  lval_del(a);
+  return lval_sexpr();
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
   lval* k = lval_sym(name);
   lval* v = lval_fun(func);
@@ -502,12 +554,13 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "tail", builtin_tail);
   lenv_add_builtin(e, "eval", builtin_eval);
   lenv_add_builtin(e, "join", builtin_join);
+  /* Variable Functions */
+  lenv_add_builtin(e, "def", builtin_def);
   /* Mathematical Functions */
   lenv_add_builtin(e, "+", builtin_add);
   lenv_add_builtin(e, "-", builtin_sub);
   lenv_add_builtin(e, "*", builtin_mul);
   lenv_add_builtin(e, "/", builtin_div);
-
 }
 
 int main(int argc, char** argv) {
