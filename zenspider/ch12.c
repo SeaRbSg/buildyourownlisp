@@ -153,7 +153,6 @@ lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
 
 char *lval_type_name(int t);
-long count_leaves(mpc_ast_t *t);
 void lval_print(lval *v);
 void lval_print_expr(lval *v, char open, char close);
 void lval_println(lval *v);
@@ -672,20 +671,6 @@ char* lval_type_name(int t) {
   case LVAL_SEXP: return "sexp";
   case LVAL_QEXP: return "qexp";
   default: return "unknown";
-  }
-}
-
-long count_leaves(mpc_ast_t* t) { // TODO remove me or hook me in
-  long max = t->children_num;
-
-  if (max == 0) {
-    return 1;
-  } else {
-    int total = 0;
-    for (int i = 0; i < max; i++) {
-      total += count_leaves(t->children[i]);
-    }
-    return total;
   }
 }
 
