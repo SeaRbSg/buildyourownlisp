@@ -340,15 +340,32 @@ lval* lval_add(lval* v, lval *x) {
 lval* lval_call(lenv* e, lval* f, lval* a) {
   if (L_TYPE(f) == LVAL_FUN) return L_CFUN(f)(e, a);
 
-  FOREACH_SEXP(i, a) {
-    lenv_put(L_ENV(f), L_CELL_N(L_FORM(f), i), L_CELL_N(a, i));
+  int given = L_COUNT(a);
+  int total = L_COUNT(L_FORM(f));
+
+  while (L_COUNT(a)) {
+    if (L_COUNT(L_FORM(f)) == 0) {
+      lval_del(a);
+      return lval_err(LERR_ARITY, "call formals", given, total);
+    }
+
+    lval* sym = lval_pop(L_FORM(f), 0);
+    lval* val = lval_pop(a, 0);
+
+    lenv_put(L_ENV(f), sym, val);
+
+    lval_del(sym);
+    lval_del(val);
   }
 
   lval_del(a);
 
-  E_PARENT(L_ENV(f)) = e;
-
-  return builtin_eval(L_ENV(f), lval_add(lval_sexp(), lval_copy(L_BODY(f))));
+  if (L_COUNT(L_FORM(f)) == 0) {
+    E_PARENT(L_ENV(f)) = e;
+    return builtin_eval(L_ENV(f), lval_add(lval_sexp(), lval_copy(L_BODY(f))));
+  } else {
+    return lval_copy(f);
+  }
 }
 
 lval* lval_cons(lval* x, lval *s) {
