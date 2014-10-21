@@ -35,11 +35,17 @@ typedef lval*(*lbuiltin)(lenv*, lval*);
 
 struct lval {
   int type;
+
+  long num;
   char* err;
   char* sym;
-  lbuiltin fun;
+
+  lbuiltin builtin;
+  lenv* env;
+  lval* formals;
+  lval* body;
+
   int count;
-  long num;
   struct lval** cell;
 };
 
@@ -97,9 +103,22 @@ lval* lval_qexpr(void) {
 lval* lval_fun(lbuiltin func) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_FUN;
-  v->fun = func;
+  v->builtin = func;
   return v;
 };
+
+lval* lval_lambda(lval* formals, lval* body) {
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_FUN;
+
+  v->builtin = NULL;
+
+  v->env = lenv_new();
+
+  v->formals = formals;
+  v->body = body;
+  return v;  
+}
 
 void lval_del(lval* v) {
   switch (v->type) {
@@ -107,6 +126,13 @@ void lval_del(lval* v) {
   case LVAL_FUN: break;
   case LVAL_ERR: free(v->err); break;
   case LVAL_SYM: free(v->sym); break;
+  case LVAL_FUN:
+    if (!v->builtin) {
+      lenv_del(v->env);
+      lval_del(v->formals);
+      lval_del(v->body);
+    }
+    break;
 
   case LVAL_QEXPR:
   case LVAL_SEXPR:
@@ -137,11 +163,20 @@ lval* lval_copy(lval* v) {
   x->type = v->type;
 
   switch (v->type) {
-  case LVAL_FUN: x->fun = v->fun; break;
+  case LVAL_FUN: x->builtin = v->builtin; break;
   case LVAL_NUM: x->num = v->num; break;
   case LVAL_ERR: x->err = malloc(strlen(v->err) + 1); strcpy(x->err, v->err); break;
   case LVAL_SYM: x->sym = malloc(strlen(v->sym) + 1); strcpy(x->sym, v->sym); break;
-
+  case LVAL_FUN:
+    if (v->builtin) {
+      x->builtin = v->builtin;
+    } else {
+      x->builtin = null;
+      x->env = lenv_copy(v->env);
+      x->formals = lval_copy(v->formals);
+      x->body = lval_copy(v->body);
+    }
+    break;
   case LVAL_SEXPR:
   case LVAL_QEXPR:
     x->count = v->count;
@@ -206,7 +241,13 @@ void lval_print(lval* val) {
     break;
   case LVAL_FUN:
     printf("<function>");
-    break;
+    break;case LVAL_FUN:
+    if (v->builtin) {
+      printf("<builtin>");
+    } else {
+      printf("(\\ "); lval_print(v->formals); putchar(' '); lval_print(v->body); putchar(')');
+    }
+    break;  
   }
 }
 
@@ -469,7 +510,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
     return lval_err("first element is not a function");
   }
 
-  lval* result = f->fun(e, v);
+  lval* result = f->builtin(e, v);
   lval_del(f);
   return result;
 }
