@@ -32,7 +32,7 @@ typedef struct lval {
     char* err;
     char* sym;
     sexp sexp;
-    lbuiltin* fun;
+    lbuiltin* builtin;
   } v;
 } lval;
 
@@ -45,7 +45,7 @@ typedef struct lenv {
 #define L_COUNT(lval)     (lval)->v.sexp.count
 #define L_CELL(lval)      (lval)->v.sexp.cell
 #define L_TYPE(lval)      (lval)->type
-#define L_FUN(lval)       (lval)->v.fun
+#define L_FUN(lval)       (lval)->v.builtin
 #define L_NUM(lval)       (lval)->v.num
 #define L_ERR(lval)       (lval)->v.err
 #define L_SYM(lval)       (lval)->v.sym
