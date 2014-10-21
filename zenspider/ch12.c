@@ -106,7 +106,7 @@ typedef struct lenv {
 
 // prototypes -- via cproto -- I'm not a masochist.
 
-/* ch11.c */
+/* ch12.c */
 lval *lval_new(void);
 lval *lval_err(char *fmt, ...);
 lval *lval_fun(lbuiltin *func);
@@ -116,19 +116,16 @@ lval *lval_sexp(void);
 lval *lval_sym(char *s);
 lval *lval_copy(lval *v);
 void lval_del(lval *v);
-
 lval *lval_add(lval *v, lval *x);
 lval *lval_cons(lval *x, lval *s);
 lval *lval_join(lval *x, lval *y);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
-
 lenv *lenv_new(void);
 void lenv_del(lenv *e);
 lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
 void lenv_println(lenv *e);
-
 void lenv_add_builtin(lenv *e, char *name, lbuiltin *func);
 void lenv_add_builtins(lenv *e);
 lval *lval_eval(lenv *e, lval *v);
@@ -151,13 +148,12 @@ lval *builtin_mod(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
-
 char *lval_type_name(int t);
 void lval_print(lval *v);
 void lval_print_expr(lval *v, char open, char close);
 void lval_println(lval *v);
-
 int main(void);
+/* DONE */
 
 /*
  * Constructors / Destructors
