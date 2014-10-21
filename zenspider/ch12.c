@@ -71,7 +71,7 @@ struct lenv {
 #define L_ENV(lval)       (lval)->v.lambda.env
 #define L_FORM(lval)      (lval)->v.lambda.formals
 #define L_BODY(lval)      (lval)->v.lambda.body
-#define L_FORM_N(lval, n) (lval)->v.lambda.formals[n]
+#define L_FORM_N(lval, n) L_CELL_N((lval)->v.lambda.formals, n)
 
 // child accessors
 #define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
@@ -350,6 +350,18 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     }
 
     lval* sym = lval_pop(L_FORM(f), 0);
+
+    if (LOOKUP(L_SYM(sym), "&")) {
+      CHECK_ARITY("& format", L_FORM(f), 1);
+
+      lval* nsym = lval_pop(L_FORM(f), 0);
+      lenv_put(L_ENV(f), nsym, builtin_list(e, a));
+      lval_del(sym);
+      lval_del(nsym);
+
+      break;
+    }
+
     lval* val = lval_pop(a, 0);
 
     lenv_put(L_ENV(f), sym, val);
@@ -359,6 +371,20 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
   }
 
   lval_del(a);
+
+  if (L_COUNT(L_FORM(f)) > 0 && LOOKUP(L_SYM(L_FORM_N(f, 0)), "&")) {
+    CHECK_ARITY("call format & arg", L_FORM(f), 2);
+
+    lval_del(lval_pop(L_FORM(f), 0));
+
+    lval* sym = lval_pop(L_FORM(f), 0);
+    lval* val = lval_qexp();
+
+    lenv_put(L_ENV(f), sym, val);
+
+    lval_del(sym);
+    lval_del(val);
+  }
 
   if (L_COUNT(L_FORM(f)) == 0) {
     E_PARENT(L_ENV(f)) = e;
