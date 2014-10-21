@@ -504,10 +504,16 @@ void lenv_put(lenv* e, lval* k, lval* v) {
 
 void lenv_println(lenv *e) {
   printf("{\n");
-  FOREACH_ENV(i, e) {
-    printf("  %s = ", E_SYM_N(e, i));
-    lval_println(E_VAL_N(e, i));
-  }
+  do {
+    FOREACH_ENV(i, e) {
+      printf("  %s = ", E_SYM_N(e, i));
+      lval_println(E_VAL_N(e, i));
+    }
+
+    if (E_PARENT(e)) printf("-----\n");
+
+    e = E_PARENT(e);
+  } while (e);
   printf("}\n");
 }
 
