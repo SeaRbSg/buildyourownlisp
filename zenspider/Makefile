@@ -1,5 +1,5 @@
 
-CFLAGS=-std=c99 -Wall -pedantic -g -O0 -ledit
+CFLAGS=-std=c99 -Wall -pedantic -Werror -g -O0 -ledit
 
 all: \
 	ch04 \

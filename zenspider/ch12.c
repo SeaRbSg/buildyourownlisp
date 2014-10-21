@@ -3,7 +3,13 @@
 #include <string.h>
 #include <math.h>
 
-enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
+enum { LVAL_NUM,   // 0
+       LVAL_SYM,   // 1
+       LVAL_SEXP,  // 2
+       LVAL_QEXP,  // 3
+       LVAL_ERR,   // 4
+       LVAL_FUN,   // 5
+       LVAL_LAM }; // 6
 
 #define LERR_ARITY "Function '%s' passed wrong number of arguments. %d != %d."
 #define LERR_BAD_NUM        "Invalid number"
@@ -16,6 +22,7 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
 #define LERR_DEF_ARITY      "Function 'def' cannot define non-symbol"
 #define LERR_TYPE "Function '%s' passed incorrect type. %s != %s"
 
+typedef char bool;
 typedef struct lval lval;
 typedef struct lenv lenv;
 typedef struct sexp sexp;
@@ -55,7 +62,7 @@ struct lenv {
 #define L_COUNT(lval)     (lval)->v.sexp.count
 #define L_CELL(lval)      (lval)->v.sexp.cell
 #define L_TYPE(lval)      (lval)->type
-#define L_CFUN(lval)       (lval)->v.builtin
+#define L_CFUN(lval)      (lval)->v.builtin
 #define L_LAM(lval)       (lval)->v.lambda
 #define L_NUM(lval)       (lval)->v.num
 #define L_ERR(lval)       (lval)->v.err
@@ -64,6 +71,7 @@ struct lenv {
 #define L_ENV(lval)       (lval)->v.lambda.env
 #define L_FORM(lval)      (lval)->v.lambda.formals
 #define L_BODY(lval)      (lval)->v.lambda.body
+#define L_FORM_N(lval, n) (lval)->v.lambda.formals[n]
 
 // child accessors
 #define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
@@ -72,12 +80,15 @@ struct lenv {
 #define FOREACH_SEXP(i, e) for (int i = 0, _max = L_COUNT(e); i < _max; ++i)
 
 // envs
-#define E_COUNT(e) (e)->count
-#define E_SYMS(e) (e)->syms
-#define E_VALS(e) (e)->vals
+#define E_PARENT(e)   (e)->parent
+#define E_COUNT(e)    (e)->count
+#define E_SYMS(e)     (e)->syms
+#define E_VALS(e)     (e)->vals
 #define E_SYM_N(e, i) (e)->syms[i]
 #define E_VAL_N(e, i) (e)->vals[i]
 #define FOREACH_ENV(i, e) for (int i = 0, _max = E_COUNT(e); i < _max; ++i)
+#define DEFINE_LOCAL  0
+#define DEFINE_GLOBAL 1
 
 // utilities
 #define RETURN_ERR(s, msg) if (1) { lval_del(s); return lval_err(msg); }
@@ -126,6 +137,7 @@ struct lenv {
 lval *lval_new(void);
 lval *lval_err(char *fmt, ...);
 lval *lval_fun(lbuiltin *func);
+lval *lval_lambda(lval *formals, lval *body);
 lval *lval_num(long x);
 lval *lval_qexp(void);
 lval *lval_sexp(void);
@@ -133,11 +145,15 @@ lval *lval_sym(char *s);
 lval *lval_copy(lval *v);
 void lval_del(lval *v);
 lval *lval_add(lval *v, lval *x);
+lval *lval_call(lenv *e, lval *f, lval *a);
 lval *lval_cons(lval *x, lval *s);
 lval *lval_join(lval *x, lval *y);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
 lenv *lenv_new(void);
+lenv *lenv_copy(lenv *e);
+lval *lenv_add(lenv *e, lval *a, bool global);
+void lenv_def(lenv *e, lval *k, lval *v);
 void lenv_del(lenv *e);
 lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
@@ -156,12 +172,14 @@ lval *builtin_eval(lenv *e, lval *a);
 lval *builtin_exp(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
 lval *builtin_join(lenv *e, lval *a);
+lval *builtin_lambda(lenv *e, lval *a);
 lval *builtin_len(lenv *e, lval *a);
 lval *builtin_list(lenv *e, lval *a);
 lval *builtin_max(lenv *e, lval *a);
 lval *builtin_min(lenv *e, lval *a);
 lval *builtin_mod(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
+lval *builtin_put(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
 char *lval_type_name(int t);
@@ -204,7 +222,7 @@ lval* lval_fun(lbuiltin* func) {
 
 lval* lval_lambda(lval* formals, lval* body) {
   lval* v = lval_new();
-  L_TYPE(v) = LVAL_FUN;
+  L_TYPE(v) = LVAL_LAM;
   L_ENV(v)  = lenv_new();
   L_FORM(v) = formals;
   L_BODY(v) = body;
@@ -244,13 +262,12 @@ lval* lval_copy(lval* v) {
 
   switch (L_TYPE(v)) {
   case LVAL_FUN:
-    if (L_CFUN(v)) {
-      L_CFUN(x) = L_CFUN(v);
-    } else {
-      L_ENV(x) = lenv_copy(L_ENV(v));
-      L_FORM(x) = lval_copy(L_FORM(v));
-      L_BODY(x) = lval_copy(L_BODY(v));
-    }
+    L_CFUN(x) = L_CFUN(v);
+    break;
+  case LVAL_LAM:
+    L_ENV(x)  = lenv_copy(L_ENV(v));
+    L_FORM(x) = lval_copy(L_FORM(v));
+    L_BODY(x) = lval_copy(L_BODY(v));
     break;
   case LVAL_NUM:
     L_NUM(x) = L_NUM(v);
@@ -281,12 +298,13 @@ lval* lval_copy(lval* v) {
 void lval_del(lval* v) {
   switch (L_TYPE(v)) {
   case LVAL_NUM:
+    break;
   case LVAL_FUN:
-    if (!L_CFUN(v)) {
-      lenv_del(L_ENV(v));
-      lval_del(L_FORM(v));
-      lval_del(L_BODY(v));
-    }
+    break;
+  case LVAL_LAM:
+    lenv_del(L_ENV(v));
+    lval_del(L_FORM(v));
+    lval_del(L_BODY(v));
     break;
   case LVAL_SYM:
     free(L_SYM(v));
@@ -317,6 +335,20 @@ lval* lval_add(lval* v, lval *x) {
   L_CELL(v) = realloc(L_CELL(v), sizeof(lval*) * L_COUNT(v));
   L_CELL_N(v, L_COUNT(v) - 1) = x;
   return v;
+}
+
+lval* lval_call(lenv* e, lval* f, lval* a) {
+  if (L_TYPE(f) == LVAL_FUN) return L_CFUN(f)(e, a);
+
+  FOREACH_SEXP(i, a) {
+    lenv_put(L_ENV(f), L_CELL_N(L_FORM(f), i), L_CELL_N(a, i));
+  }
+
+  lval_del(a);
+
+  E_PARENT(L_ENV(f)) = e;
+
+  return builtin_eval(L_ENV(f), lval_add(lval_sexp(), lval_copy(L_BODY(f))));
 }
 
 lval* lval_cons(lval* x, lval *s) {
@@ -362,10 +394,53 @@ lval* lval_take(lval* v, int i) { // TODO: prove lval_del is appropriate
 
 lenv* lenv_new(void) {
   lenv* e = malloc(sizeof(lenv));
-  E_COUNT(e) = 0;
-  E_SYMS(e) = NULL;
-  E_VALS(e) = NULL;
+  E_COUNT(e)  = 0;
+  E_PARENT(e) = NULL;
+  E_SYMS(e)   = NULL;
+  E_VALS(e)   = NULL;
   return e;
+}
+
+lenv* lenv_copy(lenv* e) {
+  lenv* n = lenv_new();
+  E_PARENT(n) = E_PARENT(e);
+  E_COUNT(n)  = E_COUNT(e);
+  E_SYMS(n)   = malloc(sizeof(char*) * E_COUNT(n));
+
+  FOREACH_ENV(i, n) {
+    E_SYM_N(n, i) = strdup(E_SYM_N(e, i));
+    E_VAL_N(n, i) = lval_copy(E_VAL_N(e, i));
+  }
+
+  return n;
+}
+
+lval* lenv_add(lenv* e, lval* a, bool global) {
+  lval* syms = L_CELL_N(a, 0);
+
+  CHECK_TYPE("def", a, 0, LVAL_QEXP);
+  if (L_COUNT(syms) != L_COUNT(a)-1)   RETURN_ERR(a, LERR_DEF_ARITY);
+  FOREACH_SEXP(i, syms) {
+    CHECK_TYPE("def (syms)", syms, i, LVAL_SYM);
+  }
+
+  FOREACH_SEXP(i, syms) {
+    if (global) {
+      lenv_put(e, L_CELL_N(syms, i), L_CELL_N(a, i+1));
+    } else {
+      lenv_def(e, L_CELL_N(syms, i), L_CELL_N(a, i+1));
+    }
+  }
+
+  lval_del(a);
+
+  return lval_sexp();
+}
+
+void lenv_def(lenv* e, lval* k, lval* v) {
+  while (E_PARENT(e)) e = E_PARENT(e);
+
+  lenv_put(e, k, v);
 }
 
 void lenv_del(lenv* e) {
@@ -385,7 +460,11 @@ lval* lenv_get(lenv* e, lval* k) {
     }
   }
 
-  return lval_err(LERR_ENV_GET, L_SYM(k));
+  if (E_PARENT(e)) {
+    return lenv_get(E_PARENT(e), k);
+  } else {
+    return lval_err(LERR_ENV_GET, L_SYM(k));
+  }
 }
 
 void lenv_put(lenv* e, lval* k, lval* v) {
@@ -425,25 +504,24 @@ void lenv_add_builtin(lenv *e, char *name, lbuiltin *func) {
 }
 
 void lenv_add_builtins(lenv *e) {
-  lenv_add_builtin(e, "def", builtin_def);
-
-  lenv_add_builtin(e, "list", builtin_list);
-  lenv_add_builtin(e, "head", builtin_head);
-  lenv_add_builtin(e, "tail", builtin_tail);
-  lenv_add_builtin(e, "eval", builtin_eval);
-  lenv_add_builtin(e, "join", builtin_join);
-
-  lenv_add_builtin(e, "+", builtin_add);
-  lenv_add_builtin(e, "-", builtin_sub);
-  lenv_add_builtin(e, "*", builtin_mul);
-  lenv_add_builtin(e, "/", builtin_div);
-  lenv_add_builtin(e, "%", builtin_mod);
-  lenv_add_builtin(e, "^", builtin_exp);
-
-  lenv_add_builtin(e, "cons", builtin_cons);
-  lenv_add_builtin(e, "len",  builtin_len);
-  lenv_add_builtin(e, "min", builtin_min);
-  lenv_add_builtin(e, "max", builtin_max);
+  lenv_add_builtin(e, "+",      builtin_add);
+  lenv_add_builtin(e, "cons",   builtin_cons);
+  lenv_add_builtin(e, "def",    builtin_def);
+  lenv_add_builtin(e, "/",      builtin_div);
+  lenv_add_builtin(e, "eval",   builtin_eval);
+  lenv_add_builtin(e, "^",      builtin_exp);
+  lenv_add_builtin(e, "head",   builtin_head);
+  lenv_add_builtin(e, "join",   builtin_join);
+  lenv_add_builtin(e, "lambda", builtin_lambda);
+  lenv_add_builtin(e, "len",    builtin_len);
+  lenv_add_builtin(e, "list",   builtin_list);
+  lenv_add_builtin(e, "max",    builtin_max);
+  lenv_add_builtin(e, "min",    builtin_min);
+  lenv_add_builtin(e, "%",      builtin_mod);
+  lenv_add_builtin(e, "*",      builtin_mul);
+  lenv_add_builtin(e, "=",      builtin_put);
+  lenv_add_builtin(e, "-",      builtin_sub);
+  lenv_add_builtin(e, "tail",   builtin_tail);
 }
 
 /*
@@ -486,15 +564,23 @@ lval* lval_eval_sexp(lenv *e, lval* v) {
   }
 
   lval* f = lval_pop(v, 0);
+  lval* result;
 
-  if (L_TYPE(f) != LVAL_FUN) {
+  switch (L_TYPE(f)) {
+  case LVAL_FUN:
+    result = L_CFUN(f)(e, v);
+    lval_del(f);
+    return result;
+    break;
+  case LVAL_LAM:
+    result = lval_call(e, f, v);
+    return result;
+    break;
+  default:
     lval_del(f);
     RETURN_ERR(v, LERR_BAD_SEXP);
   }
 
-  lval* result = L_CFUN(f)(e, v);
-  lval_del(f);
-  return result;
 }
 
 lval* lval_read(mpc_ast_t* t) {
@@ -549,21 +635,7 @@ BUILTIN(cons) {
 }
 
 BUILTIN(def) {
-  lval* syms = L_CELL_N(a, 0);
-
-  CHECK_TYPE("def", a, 0, LVAL_QEXP);
-  if (L_COUNT(syms) != L_COUNT(a)-1)   RETURN_ERR(a, LERR_DEF_ARITY);
-  FOREACH_SEXP(i, syms) {
-    CHECK_TYPE("def (syms)", syms, i, LVAL_SYM);
-  }
-
-  FOREACH_SEXP(i, syms) {
-    lenv_put(e, L_CELL_N(syms, i), L_CELL_N(a, i+1));
-  }
-
-  lval_del(a);
-
-  return lval_sexp();
+  return lenv_add(e, a, DEFINE_LOCAL);
 }
 
 BUILTIN(div) {
@@ -618,6 +690,22 @@ BUILTIN(join) {
   return x;
 }
 
+BUILTIN(lambda) {
+  CHECK_ARITY("lambda", a, 2);
+  CHECK_TYPE("lambda", a, 0, LVAL_QEXP);
+  CHECK_TYPE("lambda", a, 1, LVAL_QEXP);
+
+  FOREACH_SEXP(i, a) {
+    CHECK_TYPE("lambda args", L_CELL_N(a, 0), i, LVAL_SYM); // TODO: refactor
+  }
+
+  lval* formals = lval_pop(a, 0);
+  lval* body    = lval_pop(a, 0);
+  lval_del(a);
+
+  return lval_lambda(formals, body);
+}
+
 BUILTIN(len) {
   return lval_num(L_COUNT_N(a, 0));
 }
@@ -650,6 +738,10 @@ BUILTIN(mul) {
   CHECK_FOR_NUMBERS(a);
   FOREACH_NUMBER(a, result, n, L_NUM(result) *= n);
   return result;
+}
+
+BUILTIN(put) {
+  return lenv_add(e, a, DEFINE_GLOBAL);
 }
 
 BUILTIN(sub) {
@@ -696,7 +788,8 @@ BUILTIN(tail) {
 
 char* lval_type_name(int t) {
   switch (t) {
-  case LVAL_FUN: return "function";
+  case LVAL_FUN: return "builtin";
+  case LVAL_LAM: return "lambda";
   case LVAL_NUM: return "number";
   case LVAL_ERR: return "error";
   case LVAL_SYM: return "symbol";
@@ -712,15 +805,14 @@ void lval_print(lval* v) {
     printf("%li", L_NUM(v));
     break;
   case LVAL_FUN:
-    if (L_CFUN(v)) {
-      printf("<function>");
-    } else {
-      printf("(lambda ");
-      lval_print(L_FORM(v));
-      putchar(' ');
-      lval_print(L_BODY(v));
-      putchar(')');
-    }
+    printf("<function>");
+    break;
+  case LVAL_LAM:
+    printf("(lambda ");
+    lval_print(L_FORM(v));
+    putchar(' ');
+    lval_print(L_BODY(v));
+    putchar(')');
     break;
   case LVAL_SYM:
     printf("%s", L_SYM(v));
