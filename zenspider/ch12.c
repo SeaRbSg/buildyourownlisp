@@ -16,22 +16,24 @@ enum { LVAL_NUM, LVAL_SYM, LVAL_SEXP, LVAL_QEXP, LVAL_ERR, LVAL_FUN };
 #define LERR_DEF_ARITY      "Function 'def' cannot define non-symbol"
 #define LERR_TYPE "Function '%s' passed incorrect type. %s != %s"
 
-struct lval;
-struct lenv;
+typedef struct lval lval;
+typedef struct lenv lenv;
+typedef struct sexp sexp;
+typedef struct lambda lambda;
 typedef struct lval*(lbuiltin)(struct lenv*, struct lval*);
 
-typedef struct sexp {
+struct sexp {
   int count;
-  struct lval** cell;
-} sexp;
+  lval** cell;
+};
 
-typedef struct lambda {
-  struct lenv* env;
-  struct lval* formals;
-  struct lval* body;
-} lambda;
+struct lambda {
+  lenv* env;
+  lval* formals;
+  lval* body;
+};
 
-typedef struct lval {
+struct lval {
   int type;
   union {
     long num;
@@ -41,13 +43,14 @@ typedef struct lval {
     lbuiltin* builtin;
     lambda lambda;
   } v;
-} lval;
+};
 
-typedef struct lenv {
+struct lenv {
+  lenv* parent;
   int count;
   char** syms;
-  struct lval** vals;
-} lenv;
+  lval** vals;
+};
 
 #define L_COUNT(lval)     (lval)->v.sexp.count
 #define L_CELL(lval)      (lval)->v.sexp.cell
