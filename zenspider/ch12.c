@@ -25,6 +25,12 @@ typedef struct sexp {
   struct lval** cell;
 } sexp;
 
+typedef struct lambda {
+  struct lenv* env;
+  struct lval* formals;
+  struct lval* body;
+} lambda;
+
 typedef struct lval {
   int type;
   union {
@@ -33,6 +39,7 @@ typedef struct lval {
     char* sym;
     sexp sexp;
     lbuiltin* builtin;
+    lambda lambda;
   } v;
 } lval;
 
@@ -45,10 +52,15 @@ typedef struct lenv {
 #define L_COUNT(lval)     (lval)->v.sexp.count
 #define L_CELL(lval)      (lval)->v.sexp.cell
 #define L_TYPE(lval)      (lval)->type
-#define L_FUN(lval)       (lval)->v.builtin
+#define L_CFUN(lval)       (lval)->v.builtin
+#define L_LAM(lval)       (lval)->v.lambda
 #define L_NUM(lval)       (lval)->v.num
 #define L_ERR(lval)       (lval)->v.err
 #define L_SYM(lval)       (lval)->v.sym
+
+#define L_ENV(lval)       (lval)->v.lambda.env
+#define L_FORM(lval)      (lval)->v.lambda.formals
+#define L_BODY(lval)      (lval)->v.lambda.body
 
 // child accessors
 #define L_CELL_N(lval, n) (lval)->v.sexp.cell[(n)]
@@ -182,7 +194,16 @@ lval* lval_err(char* fmt, ...) {
 lval* lval_fun(lbuiltin* func) {
   lval* v = lval_new();
   L_TYPE(v) = LVAL_FUN;
-  L_FUN(v) = func;
+  L_CFUN(v) = func;
+  return v;
+}
+
+lval* lval_lambda(lval* formals, lval* body) {
+  lval* v = lval_new();
+  L_TYPE(v) = LVAL_FUN;
+  L_ENV(v)  = lenv_new();
+  L_FORM(v) = formals;
+  L_BODY(v) = body;
   return v;
 }
 
@@ -219,7 +240,13 @@ lval* lval_copy(lval* v) {
 
   switch (L_TYPE(v)) {
   case LVAL_FUN:
-    L_FUN(x) = L_FUN(v);
+    if (L_CFUN(v)) {
+      L_CFUN(x) = L_CFUN(v);
+    } else {
+      L_ENV(x) = lenv_copy(L_ENV(v));
+      L_FORM(x) = lval_copy(L_FORM(v));
+      L_BODY(x) = lval_copy(L_BODY(v));
+    }
     break;
   case LVAL_NUM:
     L_NUM(x) = L_NUM(v);
@@ -251,6 +278,11 @@ void lval_del(lval* v) {
   switch (L_TYPE(v)) {
   case LVAL_NUM:
   case LVAL_FUN:
+    if (!L_CFUN(v)) {
+      lenv_del(L_ENV(v));
+      lval_del(L_FORM(v));
+      lval_del(L_BODY(v));
+    }
     break;
   case LVAL_SYM:
     free(L_SYM(v));
@@ -456,7 +488,7 @@ lval* lval_eval_sexp(lenv *e, lval* v) {
     RETURN_ERR(v, LERR_BAD_SEXP);
   }
 
-  lval* result = L_FUN(f)(e, v);
+  lval* result = L_CFUN(f)(e, v);
   lval_del(f);
   return result;
 }
@@ -676,7 +708,15 @@ void lval_print(lval* v) {
     printf("%li", L_NUM(v));
     break;
   case LVAL_FUN:
-    printf("<function>");
+    if (L_CFUN(v)) {
+      printf("<function>");
+    } else {
+      printf("(lambda ");
+      lval_print(L_FORM(v));
+      putchar(' ');
+      lval_print(L_BODY(v));
+      putchar(')');
+    }
     break;
   case LVAL_SYM:
     printf("%s", L_SYM(v));
