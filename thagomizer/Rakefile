@@ -1,0 +1,15 @@
+task :redo do
+  f = ENV["F"] || abort("gimme F")
+  headers = `cproto #{f} 2> /dev/null`
+
+  file = File.read f
+  ff = Regexp.escape File.basename f
+  file[/\/\* #{ff} \*\/.+\/\* DONE \*\//m] = headers + "/* DONE */"
+
+  File.rename f, "#{f}~"
+  File.open f, "w" do |io|
+    io.write file
+  end
+
+  puts "Updated #{f} headers"
+end
