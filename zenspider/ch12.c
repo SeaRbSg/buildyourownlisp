@@ -394,13 +394,13 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
   }
 }
 
-lval* lval_cons(lval* x, lval *s) {
-  size_t size = L_COUNT(s);
-  L_COUNT(s)++;
-  L_CELL(s) = realloc(L_CELL(s), size+1);
-  memmove(&L_CELL_N(s, 1), &L_CELL_N(s, 0), sizeof(lval*) * size);
-  L_CELL_N(s, 0) = x;
-  return s;
+lval* lval_cons(lval* x, lval *xs) {
+  size_t size = L_COUNT(xs);
+  L_COUNT(xs)++;
+  L_CELL(xs) = realloc(L_CELL(xs), size+1);
+  memmove(&L_CELL_N(xs, 1), &L_CELL_N(xs, 0), sizeof(lval*) * size);
+  L_CELL_N(xs, 0) = x;
+  return xs;
 }
 
 lval* lval_join(lval* x, lval* y) {
