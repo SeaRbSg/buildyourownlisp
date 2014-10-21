@@ -10,6 +10,7 @@ all: \
 	ch09 \
 	ch10 \
 	ch11 \
+	ch12 \
 	$(NULL)
 
 ch04: ch04.c
@@ -28,9 +29,16 @@ ch10: ch10.c mpc.c
 
 ch11: ch11.c mpc.c
 
+ch12: ch12.c mpc.c
+
 .PHONY: clean realclean
 clean:
 	rm -rf *.dSYM *~
 
 realclean: clean
 	rm -f ch?? *.o
+
+# depend:
+# 	mkdep -p ${CFLAGS} ch12.c mpc.c
+# 
+# include .depend
