@@ -406,6 +406,7 @@ lenv* lenv_copy(lenv* e) {
   E_PARENT(n) = E_PARENT(e);
   E_COUNT(n)  = E_COUNT(e);
   E_SYMS(n)   = malloc(sizeof(char*) * E_COUNT(n));
+  E_VALS(n)   = malloc(sizeof(lval*) * E_COUNT(n));
 
   FOREACH_ENV(i, n) {
     E_SYM_N(n, i) = strdup(E_SYM_N(e, i));
