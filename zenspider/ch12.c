@@ -397,7 +397,7 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
 lval* lval_cons(lval* x, lval *xs) {
   size_t size = L_COUNT(xs);
   L_COUNT(xs)++;
-  L_CELL(xs) = realloc(L_CELL(xs), size+1);
+  L_CELL(xs) = realloc(L_CELL(xs), sizeof(lval*) * (size+1));
   memmove(&L_CELL_N(xs, 1), &L_CELL_N(xs, 0), sizeof(lval*) * size);
   L_CELL_N(xs, 0) = x;
   return xs;
