@@ -2,6 +2,7 @@
 *.swo
 *.dSYM
 tags
+prototypes.c
 hello_world
 hellooo_world
 parsing
