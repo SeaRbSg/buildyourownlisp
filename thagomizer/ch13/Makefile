@@ -1,5 +1,5 @@
 
-CFLAGS=-std=c99 -Wall -pedantic -g -O0 -ledit
+CFLAGS=-std=c99 -Wall -g -O0 -ledit
 
 lispy: lispy.c mpc.c
 
