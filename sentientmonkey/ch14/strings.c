@@ -321,9 +321,10 @@ lval* lval_read_dub(mpc_ast_t* t) {
 }
 
 lval* lval_read_str(mpc_ast_t* t) {
-    t->contents[strlen(t->contents)-1] = '\0'; // wtf
-    char* unescaped = malloc(strlen(t->contents+1)+1);
-    strcpy(unescaped, t->contents+1);
+    /* trim quotes */
+    char* unescaped = malloc(strlen(t->contents)-2);
+    strlcpy(unescaped, (t->contents+1), strlen(t->contents)-1);
+
     unescaped = mpcf_unescape(unescaped);
     lval* str = lval_str(unescaped);
     free(unescaped);
