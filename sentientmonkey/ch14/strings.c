@@ -9,6 +9,7 @@
 #define ERR_BUF_SIZE 512
 
 #define STR_EQ(A,B)   (strcmp(A,B) == 0)
+#define STR_CONTAINS(A,B)   (strstr(A,B))
 #define MIN(X,Y)    ((X < Y) ? X : Y)
 #define MAX(X,Y)    ((X > Y) ? X : Y)
 #define LCHECK(args, cond, fmt, ...) \
@@ -45,7 +46,7 @@ typedef struct lval lval;
 typedef struct lenv lenv;
 
 /* creating enums without typedef feels wrong, so I added them. */
-typedef enum { LVAL_ERR, LVAL_NUM, LVAL_DUB, LVAL_SYM, LVAL_STR, LVAL_FUN, 
+typedef enum { LVAL_ERR, LVAL_NUM, LVAL_DUB, LVAL_SYM, LVAL_STR, LVAL_FUN,
                LVAL_SEXPR, LVAL_QEXPR } lval_type_t;
 
 typedef lval*(*lbuiltin)(lenv*, lval*);
@@ -342,16 +343,16 @@ lval* lval_read_str(mpc_ast_t* t) {
 }
 
 lval* lval_read(mpc_ast_t* t) {
-    if (strstr(t->tag, "number")) {
+    if STR_CONTAINS(t->tag, "number") {
         return lval_read_num(t);
     }
-    if (strstr(t->tag, "double")) {
+    if STR_CONTAINS(t->tag, "double") {
         return lval_read_dub(t);
     }
-    if (strstr(t->tag, "symbol")) {
+    if STR_CONTAINS(t->tag, "symbol") {
         return lval_sym(t->contents);
     }
-    if (strstr(t->tag, "string")) {
+    if STR_CONTAINS(t->tag, "string") {
         return lval_read_str(t);
     }
 
@@ -361,11 +362,11 @@ lval* lval_read(mpc_ast_t* t) {
         x = lval_sexpr();
     }
 
-    if (strstr(t->tag, "sexpr")) {
+    if STR_CONTAINS(t->tag, "sexpr") {
         x = lval_sexpr();
     }
 
-    if (strstr(t->tag, "qexpr")) {
+    if STR_CONTAINS(t->tag, "qexpr") {
         x = lval_qexpr();
     }
 
@@ -375,7 +376,7 @@ lval* lval_read(mpc_ast_t* t) {
         if STR_EQ(t->children[i]->contents, "}") { continue; }
         if STR_EQ(t->children[i]->contents, "{") { continue; }
         if STR_EQ(t->children[i]->tag, "regex") { continue; }
-        if STR_EQ(t->children[i]->tag, "comment") { continue; }
+        if STR_CONTAINS(t->children[i]->tag, "comment") { continue; }
 
         x = lval_add(x, lval_read(t->children[i]));
     }
