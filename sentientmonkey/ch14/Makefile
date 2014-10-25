@@ -16,6 +16,9 @@ strings: prototypes.c strings.c mpc.c
 run: strings
 	./strings
 
+hello: strings
+	./strings hello.lispy
+
 clean:
 	rm -Rf strings
 	rm -Rf prototypes.c
