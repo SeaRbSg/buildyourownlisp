@@ -1072,6 +1072,43 @@ lval* builtin_error(lenv* e, lval* a) {
     return err;
 }
 
+lval* builtin_parse(lenv* e, lval* a) {
+    LCHECK_COUNT("parse", a, 1);
+    LCHECK_TYPE("parse", a->cell[0], LVAL_STR);
+
+    lval* x = NULL;
+
+    mpc_result_t r;
+
+    if (mpc_parse("<stdin>", a->cell[0]->str, Lispy, &r)) {
+       x = lval_read(r.output);
+    } else {
+        char* err_msg = mpc_err_string(r.error);
+        x = lval_err(err_msg);
+        mpc_err_delete(r.error);
+        free(err_msg);
+    }
+
+    lval_del(a);
+
+    return x;
+}
+
+lval* builtin_read(lenv* e, lval* a) {
+    LCHECK_COUNT("read", a, 1);
+    LCHECK_TYPE("read", a->cell[0], LVAL_STR);
+
+    lval* x = builtin_parse(e, a);
+    if (x->type == LVAL_ERR) {
+        return x;
+    }
+
+    LCHECK_TYPE("read", x, LVAL_SEXPR);
+    x->type = LVAL_QEXPR;
+
+    return x;
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
     lval* k = lval_sym(name);
     lval* v = lval_fun(name, func);
@@ -1127,6 +1164,8 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "error", builtin_error);
     lenv_add_builtin(e, "print", builtin_print);
     lenv_add_builtin(e, "show", builtin_show);
+    lenv_add_builtin(e, "read", builtin_read);
+    lenv_add_builtin(e, "parse", builtin_parse);
 }
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
@@ -1280,17 +1319,11 @@ int main(int argc, char** argv) {
             add_history(input);
             if (!input) { break; }
 
-            mpc_result_t r;
-
-            if (mpc_parse("<stdin>", input, Lispy, &r)) {
-                lval* x = lval_read(r.output);
-                x = lval_eval(e, x);
-                lval_println(x);
-                lval_del(x);
-            } else {
-                mpc_err_print(r.error);
-                mpc_err_delete(r.error);
-            }
+            lval* in = lval_add(lval_sexpr(), lval_str(input));
+            lval* x = builtin_parse(e, in);
+            x = lval_eval(e, x);
+            lval_println(x);
+            lval_del(x);
 
             free(input);
         }
