@@ -47,7 +47,7 @@ typedef struct lenv lenv;
 
 /* creating enums without typedef feels wrong, so I added them. */
 typedef enum { LVAL_ERR, LVAL_NUM, LVAL_DUB, LVAL_SYM, LVAL_STR, LVAL_FUN,
-               LVAL_SEXPR, LVAL_QEXPR } lval_type_t;
+               LVAL_SEXPR, LVAL_QEXPR} lval_type_t;
 
 typedef lval*(*lbuiltin)(lenv*, lval*);
 
@@ -187,6 +187,10 @@ lval* lval_sexpr(void) {
 
 lval* lval_qexpr(void) {
     return lval_new(LVAL_QEXPR);
+}
+
+lval* lval_ok(void) {
+    return lval_sym("ok");
 }
 
 void lval_del(lval* v) {
@@ -834,7 +838,7 @@ lval* builtin_env(lenv* e, lval* a) {
 
     lval_del(a);
 
-    return lval_sexpr();
+    return lval_ok();
 }
 
 lval* builtin_exit(lenv* e, lval* a) {
@@ -878,7 +882,7 @@ lval* builtin_var(lenv* e, lval* a, char* func) {
     }
 
     lval_del(a);
-    return lval_sexpr();
+    return lval_ok();
 }
 
 lval* builtin_def(lenv* e, lval* a) {
@@ -1022,7 +1026,7 @@ lval* builtin_load(lenv* e, lval* a) {
         lval_del(expr);
         lval_del(a);
 
-        return lval_sexpr();
+        return lval_ok();
     } else {
         char* err_msg = mpc_err_string(r.error);
         mpc_err_delete(r.error);
@@ -1044,7 +1048,7 @@ lval* builtin_print(lenv* e, lval* a) {
     putchar('\n');
     lval_del(a);
 
-    return lval_sexpr();
+    return lval_ok();
 }
 
 lval* builtin_show(lenv* e, lval* a) {
@@ -1055,7 +1059,7 @@ lval* builtin_show(lenv* e, lval* a) {
 
     lval_del(a);
 
-    return lval_sexpr();
+    return lval_ok();
 }
 
 lval* builtin_error(lenv* e, lval* a) {
