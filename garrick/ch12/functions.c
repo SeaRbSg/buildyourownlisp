@@ -42,6 +42,7 @@ lval* lval_err(char* fmt, ...);
 lval* builtin(lval* a, char* builtin);
 lval* builtin_op(lenv* e, lval* a, char* op);
 lval* builtin_eval(lenv* e, lval* a);
+lval* builtin_list(lenv* e, lval* a);
 lval* lval_join(lval* x, lval* y);
 void lval_del(lval* v);
 
@@ -422,6 +423,23 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     /* Pop the first symbol from the formals */
     lval* sym = lval_pop(f->formals, 0);
 
+    /* Special case to deal with the '&' character. */
+    if (strcmp(sym->sym, "&") == 0) {
+      /* Ensure '&' is followed by another symbol */
+      if(f->formals->count != 1) {
+        lval_del(a);
+        return lval_err("Function format invalid.  Symbol '&' not followed by a single symbol.");
+      }
+      /* Next formal should be bound to remaining arguments */
+      lval* nsym = lval_pop(f->formals, 0);
+      lenv_put(f->env, nsym, builtin_list(e, a));
+      lval_del(sym);
+      lval_del(nsym);
+      break;
+    }
+
+
+
     /* Pop the next argument from the list */
     lval* val = lval_pop(a, 0);
 
@@ -432,8 +450,28 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     lval_del(sym);
     lval_del(val);
   }
+
   /* argument list now bound, so can be cleaned up */
   lval_del(a);
+    
+  /* If '%' remains in formal list, it should be bound to empty list */
+  if (f->formals->count > 0 && strcmp(f->formals->cell[0]->sym, "&") == 0) {
+    /* check to insure that '&' is not passed invalidly */
+      if (f->formals->count != 2) {
+        return lval_err("Function format invalid.  Symbol '&' not followed by a single symbol.");
+      }
+      /* Pop & delete the symbol */
+      lval_del(lval_pop(f->formals, 0));
+
+      /* Pop the next symbol and create an empty list */
+      lval* sym = lval_pop(f->formals, 0);
+      lval* val = lval_qexpr();
+
+      /* Bind to the env and delete */
+      lenv_put(f->env, sym, val);
+      lval_del(sym);
+      lval_del(val);
+    }
 
   /* If all the formals have been found, evaluate */
   if (f->formals->count == 0) {
