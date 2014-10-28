@@ -633,6 +633,26 @@ lval* builtin_ne(lenv* e, lval* a) {
   return builtin_cmp(e, a, "!="); 
 }
 
+lval* builtin_if(lenv* e, lval* a) {
+  LASSERT_NUM("if", a, 3);
+  LASSERT_TYPE("if", a, 0, LVAL_NUM);
+  LASSERT_TYPE("if", a, 1, LVAL_QEXPR);
+  LASSERT_TYPE("if", a, 2, LVAL_QEXPR);
+  
+  lval* x;
+  a->cell[1]->type = LVAL_SEXPR;
+  a->cell[2]->type = LVAL_SEXPR;
+  
+  if (a->cell[0]->num) {
+    x = lval_eval(e, lval_pop(a, 1));
+  } else {
+    x = lval_eval(e, lval_pop(a, 2));
+  }
+  
+  lval_del(a);
+  return x;
+}
+
 lval* builtin_lambda(lenv* e, lval* a) {
   LASSERT_NUM("\\", a, 2);
   LASSERT_TYPE("\\", a, 0, LVAL_QEXPR);
@@ -676,6 +696,9 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, ">",  builtin_gt); 
   lenv_add_builtin(e, "<=",  builtin_le); 
   lenv_add_builtin(e, ">=",  builtin_ge); 
+  lenv_add_builtin(e, "==",   builtin_eq);
+  lenv_add_builtin(e, "!=",   builtin_ne);
+  lenv_add_builtin(e, "if",   builtin_if);
 }
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
