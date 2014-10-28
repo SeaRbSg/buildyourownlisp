@@ -584,6 +584,36 @@ lval* builtin_div(lenv* e, lval* a) {
   return builtin_op(e, a, "/");
 }
 
+lval* builtin_ord(lenv* e, lval* a, char* op) {
+  LASSERT_NUM(op, a, 2);
+  LASSERT_TYPE(op, a, 0, LVAL_NUM);
+  LASSERT_TYPE(op, a, 1, LVAL_NUM);
+  
+  int r;
+  if (strcmp(op, ">")  == 0) { r = (a->cell[0]->num >  a->cell[1]->num); }
+  if (strcmp(op, "<")  == 0) { r = (a->cell[0]->num <  a->cell[1]->num); }
+  if (strcmp(op, ">=") == 0) { r = (a->cell[0]->num >= a->cell[1]->num); }
+  if (strcmp(op, "<=") == 0) { r = (a->cell[0]->num <= a->cell[1]->num); }
+  lval_del(a);
+  return lval_num(r);
+}
+
+lval* builtin_gt(lenv* e, lval* a) { 
+  return builtin_ord(e, a, ">");  
+}
+
+lval* builtin_lt(lenv* e, lval* a) { 
+  return builtin_ord(e, a, "<");
+}
+
+lval* builtin_ge(lenv* e, lval* a) { 
+  return builtin_ord(e, a, ">=");
+}
+
+lval* builtin_le(lenv* e, lval* a) {
+  return builtin_ord(e, a, "<=");
+}
+ 
 lval* builtin_lambda(lenv* e, lval* a) {
   LASSERT_NUM("\\", a, 2);
   LASSERT_TYPE("\\", a, 0, LVAL_QEXPR);
@@ -623,6 +653,10 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "def", builtin_def);
   lenv_add_builtin(e, "=",   builtin_put);
   lenv_add_builtin(e, "\\",  builtin_lambda); 
+  lenv_add_builtin(e, "<",  builtin_lt); 
+  lenv_add_builtin(e, ">",  builtin_gt); 
+  lenv_add_builtin(e, "<=",  builtin_le); 
+  lenv_add_builtin(e, ">=",  builtin_ge); 
 }
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
