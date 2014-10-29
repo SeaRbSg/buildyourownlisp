@@ -1048,6 +1048,20 @@ lval* builtin_print(lenv* e, lval* a) {
     }
 
     putchar('\n');
+
+    return lval_ok();
+}
+
+lval* builtin_puts(lenv* e, lval* a) {
+    LCHECK_COUNT("puts", a, 1);
+    lval* x = lval_pop(a, 0);
+
+    if (x->type == LVAL_STR) {
+        printf("%s", x->str);
+    } else {
+        lval_print(x);
+    }
+
     lval_del(a);
 
     return lval_ok();
@@ -1168,6 +1182,7 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "show", builtin_show);
     lenv_add_builtin(e, "read", builtin_read);
     lenv_add_builtin(e, "parse", builtin_parse);
+    lenv_add_builtin(e, "puts", builtin_puts);
 }
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {

@@ -1,15 +1,18 @@
+; Basic test functions
 (fun {assert-eq a b} {
   (if (== a b)
-    { show "." }
-    { show "F" }) })
+    { puts "." }
+    { do (puts "\nFailed: Expected ") (puts a) (puts ", got ") (puts b) (puts "\n")}) })
 
 (fun {skip x} {
-  (show "S") })
+  (puts "S") })
 
+; Primitives!
 (assert-eq nil {})
 (assert-eq true 1)
 (assert-eq false 0)
 
+; Logic!
 (assert-eq (not true) false)
 (assert-eq (or true false) true)
 (assert-eq (or false true) true)
@@ -17,6 +20,22 @@
 (assert-eq (and false true) false)
 (assert-eq (and true true) true)
 
-(assert-eq (eval {curry + {5 6 7}}) 18)
+; Lists!
+(assert-eq (fst {1 2 3}) 1)
+(assert-eq (snd {1 2 3}) 2)
+(assert-eq (trd {1 2 3}) 3)
 
-(skip {(assert-eq (eval {let {do (= {x} 100) (x) } }) 100)})
+(assert-eq (len {1 2 3}) 3)
+(assert-eq (nth 2 {1 2 3}) 3)
+(assert-eq (last {1 2 3 4}) 4)
+
+; curry / do!
+(assert-eq (eval {curry + {5 6 7}}) 18)
+(assert-eq (eval {let {do (= {x} 100) (x) } }) 100)
+
+; Lists++
+(assert-eq (take 2 {1 2 3}) {1 2})
+(assert-eq (drop 2 {1 2 3}) {3})
+
+(assert-eq (split 2 {1 2 3 4}) {{1 2} {3 4}})
+(skip {(assert-eq (elem 2 {1 2 3} true))})

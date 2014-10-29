@@ -37,3 +37,53 @@
 (fun {or x y} {+ x y})
 (fun {and x y} {* x y})
 
+; Misc
+(fun {flip f a b} {f b a})
+(fun {ghost & xs} {eval xs})
+(fun {comp f g x} {f (g x)})
+
+; First, second & third
+(fun {fst l} { eval (head l) })
+(fun {snd l} { eval (head (tail l)) })
+(fun {trd l} { eval (head (tail (tail l))) })
+
+; List length
+; note - redefines bultin
+(fun {len l} {
+    (if (== l nil)
+        {0}
+        {+ 1 (len (tail l))}) })
+
+; nth item in list
+(fun {nth n l} {
+     (if (== n 0)
+        {fst l}
+        {nth (- n 1) (tail l)}) })
+
+; Last item
+(fun {last l}
+     {nth (- (len l) 1) l})
+
+; Take n items
+(fun {take n l} {
+     (if (== n 0)
+       {nil}
+       {join (head l) (take (- n 1) (tail l))}) })
+
+; Drop n items
+(fun {drop n l} {
+     (if (== n 0)
+       {l}
+       {drop (- n 1) (tail l)}) })
+
+; Split at n
+(fun {split n l} {
+    list (take n l) (drop n l) })
+
+; Element of list
+(fun {elem x l} {
+     (if (== l nil)
+       {false}
+       {if (== x (fst l))
+          {true}
+          {elem x (tail l)}}) })
