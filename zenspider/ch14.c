@@ -186,6 +186,7 @@ lval *builtin_lambda(lenv *e, lval *a);
 lval *builtin_le(lenv *e, lval *a);
 lval *builtin_len(lenv *e, lval *a);
 lval *builtin_list(lenv *e, lval *a);
+lval *builtin_load(lenv *e, lval *a);
 lval *builtin_lt(lenv *e, lval *a);
 lval *builtin_max(lenv *e, lval *a);
 lval *builtin_min(lenv *e, lval *a);
@@ -202,6 +203,12 @@ void lval_print_str(lval *v);
 void lval_println(lval *v);
 int main(void);
 /* DONE */
+
+/*
+ * Static Data
+ */
+
+static mpc_parser_t* Lispy;
 
 /*
  * Constructors / Destructors
@@ -622,6 +629,7 @@ void lenv_add_builtins(lenv *e) {
   lenv_add_builtin(e, "lambda", builtin_lambda);
   lenv_add_builtin(e, "len",    builtin_len);
   lenv_add_builtin(e, "list",   builtin_list);
+  lenv_add_builtin(e, "load",   builtin_load);
   lenv_add_builtin(e, "max",    builtin_max);
   lenv_add_builtin(e, "min",    builtin_min);
   lenv_add_builtin(e, "%",      builtin_mod);
@@ -897,6 +905,41 @@ BUILTIN(list) {
   return a;
 }
 
+BUILTIN(load) {
+  CHECK_ARITY("load", a, 1);
+  CHECK_TYPE("load", a, 0, LVAL_STR);
+
+  mpc_result_t r;
+  if (mpc_parse_contents(L_STR(L_CELL_N(a, 0)), Lispy, &r)) {
+    lval* expr = lval_read(r.output);
+    mpc_ast_delete(r.output);
+
+    while (L_COUNT(expr)) {
+      lval_println(expr);
+      lval *x = lval_pop(expr, 0);
+      lval_println(x);
+      x = lval_eval(e, x);
+
+      if (L_TYPE(x) == LVAL_ERR) lval_println(x);
+      lval_del(x);
+    }
+
+    lval_del(expr);
+    lval_del(a);
+
+    return lval_sexp();
+  } else {
+    char* err_msg = mpc_err_string(r.error);
+    mpc_err_delete(r.error);
+
+    lval* err = lval_err("Could not load library %s", err_msg);
+    free(err_msg);
+    lval_del(a);
+
+    return err;
+  }
+}
+
 BUILTIN(lt) {
   CHECK_ARITY("<", a, 2);
   CHECK_FOR_NUMBERS(a);
@@ -1069,8 +1112,9 @@ int main() {
   mpc_parser_t* Sexp     = mpc_new("sexp");
   mpc_parser_t* Qexp     = mpc_new("qexp");
   mpc_parser_t* Expr     = mpc_new("expr");
-  mpc_parser_t* Lispy    = mpc_new("lispy");
   mpc_result_t r;
+
+  Lispy = mpc_new("lispy");
 
   mpca_lang(MPCA_LANG_DEFAULT, "                                \
             number   : /-?[0-9]+(\\.[0-9]+)?/;                  \
