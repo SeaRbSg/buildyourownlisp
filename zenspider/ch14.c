@@ -201,7 +201,7 @@ void lval_print(lval *v);
 void lval_print_expr(lval *v, char open, char close);
 void lval_print_str(lval *v);
 void lval_println(lval *v);
-int main(void);
+int main(int argc, char **argv);
 /* DONE */
 
 /*
@@ -915,9 +915,7 @@ BUILTIN(load) {
     mpc_ast_delete(r.output);
 
     while (L_COUNT(expr)) {
-      lval_println(expr);
       lval *x = lval_pop(expr, 0);
-      lval_println(x);
       x = lval_eval(e, x);
 
       if (L_TYPE(x) == LVAL_ERR) lval_println(x);
@@ -1104,7 +1102,7 @@ void lval_println(lval* v) {
   putchar('\n');
 }
 
-int main() {
+int main(int argc, char** argv) {
   mpc_parser_t* Number   = mpc_new("number");
   mpc_parser_t* Symbol   = mpc_new("symbol");
   mpc_parser_t* String   = mpc_new("string");
@@ -1129,6 +1127,15 @@ int main() {
 
   lenv* env = lenv_new();
   lenv_add_builtins(env);
+
+  if (argc > 1) {
+    for (int i = 1; i < argc; i++) {
+      lval* args = lval_add(lval_sexp(), lval_str(argv[i]));
+      lval* x = builtin_load(env, args);
+      if (L_TYPE(x) == LVAL_ERR) lval_println(x);
+      lval_del(x);
+    }
+  }
 
   while (1) {
     char * input = readline("lispy> ");
