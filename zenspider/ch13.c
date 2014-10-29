@@ -1007,7 +1007,7 @@ void lval_print_expr(lval* v, char open, char close) {
   FOREACH_SEXP(i, v) {
     lval_print(L_CELL_N(v, i));
 
-    if (i != _max) {
+    if (i != _max-1) {
       putchar(' ');
     }
   }
