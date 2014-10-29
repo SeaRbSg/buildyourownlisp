@@ -716,6 +716,7 @@ lval* lval_read(mpc_ast_t* t) {
     if (LOOKUP(contents, ")"))        { continue; }
     if (LOOKUP(contents, "{"))        { continue; }
     if (LOOKUP(contents, "}"))        { continue; }
+    if (SUBSTR(child->tag, "comment")){ continue; }
     if (LOOKUP(child->tag,  "regex")) { continue; }
 
     x = lval_add(x, lval_read(child));
@@ -1064,6 +1065,7 @@ int main() {
   mpc_parser_t* Number   = mpc_new("number");
   mpc_parser_t* Symbol   = mpc_new("symbol");
   mpc_parser_t* String   = mpc_new("string");
+  mpc_parser_t* Comment  = mpc_new("Comment");
   mpc_parser_t* Sexp     = mpc_new("sexp");
   mpc_parser_t* Qexp     = mpc_new("qexp");
   mpc_parser_t* Expr     = mpc_new("expr");
@@ -1074,11 +1076,12 @@ int main() {
             number   : /-?[0-9]+(\\.[0-9]+)?/;                  \
             symbol   : /[a-zA-Z0-9_+*\\/\\\\=<>!&-]+/;          \
             string   : /\"(\\\\.|[^\"])*\"/;                    \
+            comment  : /;[^\\r\\n]*/;                           \
             sexp     : '(' <expr>* ')';                         \
             qexp     : '{' <expr>* '}';                         \
-            expr     : <number> | <symbol> | <string> | <sexp> | <qexp>; \
+            expr     : <number> | <symbol> | <string> | <comment> | <sexp> | <qexp>; \
             lispy    : /^/ <expr>* /$/;                         ",
-            Number, Symbol, String, Sexp, Qexp, Expr, Lispy);
+            Number, Symbol, String, Comment, Sexp, Qexp, Expr, Lispy);
 
   lenv* env = lenv_new();
   lenv_add_builtins(env);
@@ -1103,7 +1106,7 @@ int main() {
   }
 
   free(env);
-  mpc_cleanup(7, Number, Symbol, String, Sexp, Qexp, Expr, Lispy);
+  mpc_cleanup(8, Number, Symbol, String, Comment, Sexp, Qexp, Expr, Lispy);
 
   return 0;
 }
