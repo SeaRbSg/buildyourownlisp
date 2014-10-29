@@ -51,7 +51,7 @@ struct lval {
 };
 
 /** Forward Function Declaration **/
-/* lispy.c */
+/* ch13/lispy.c */
 lval *lval_num(long x);
 lval *lval_lambda(lval *formals, lval *body);
 lval *lval_err(char *fmt, ...);
@@ -96,6 +96,14 @@ lval *builtin_var(lenv *e, lval *a, char *func);
 lval *builtin_def(lenv *e, lval *a);
 lval *builtin_put(lenv *e, lval *a);
 lval *builtin_lambda(lenv *e, lval *a);
+lval *builtin_if(lenv *e, lval *a);
+lval *builtin_gt(lenv *e, lval *a);
+lval *builtin_ge(lenv *e, lval *a);
+lval *builtin_lt(lenv *e, lval *a);
+lval *builtin_le(lenv *e, lval *a);
+lval *builtin_eq(lenv *e, lval *a);
+lval *builtin_ne(lenv *e, lval *a);
+lval *lval_eq(lval *left, lval *right);
 lval *lval_call(lenv *e, lval *f, lval *a);
 void lenv_add_builtin(lenv *e, char *name, lbuiltin func);
 void lenv_add_builtins(lenv *e);
@@ -694,20 +702,168 @@ lval* builtin_if(lenv* e, lval* a) {
   LASSERT_ARG_COUNT("if", a, 3);
 
   lval* condition = lval_pop(a, 0);
-  condition->type = LVAL_SEXPR;
   lval* t_branch  = lval_pop(a, 0);
   lval* f_branch  = lval_pop(a, 0);
 
-  lval* cond_result = lval_eval(e, condition);
+  t_branch->type = LVAL_SEXPR;
+  f_branch->type = LVAL_SEXPR;
+
   lval* result;
-  if (cond_result->num) {
-    t_branch->type = LVAL_SEXPR;
+  if (condition->num) {
     result = lval_eval(e, t_branch);
   } else {
-    f_branch->type = LVAL_SEXPR;
     result = lval_eval(e, f_branch);
   }
+
+  lval_del(a);
   return result;
+}
+
+lval* builtin_gt(lenv* e, lval* a) { 
+  LASSERT_ARG_COUNT("gt", a, 2);
+  LASSERT_TYPE("gt", a, 0, LVAL_NUM);
+  LASSERT_TYPE("gt", a, 1, LVAL_NUM);
+
+  lval* left  = lval_pop(a, 0);
+  lval* right = lval_pop(a, 0);
+
+  lval* result;
+  if (left->num > right->num) {
+    result = lval_num(1);
+  } else {
+    result = lval_num(0);
+  }
+
+  return result;
+}
+
+lval* builtin_ge(lenv* e, lval* a) { 
+  LASSERT_ARG_COUNT("ge", a, 2);
+  LASSERT_TYPE("ge", a, 0, LVAL_NUM);
+  LASSERT_TYPE("ge", a, 1, LVAL_NUM);
+
+  lval* left  = lval_pop(a, 0);
+  lval* right = lval_pop(a, 0);
+
+  lval* result;
+  if (left->num >= right->num) {
+    result = lval_num(1);
+  } else {
+    result = lval_num(0);
+  }
+
+  return result;
+}
+
+lval* builtin_lt(lenv* e, lval* a) { 
+  LASSERT_ARG_COUNT("lt", a, 2);
+  LASSERT_TYPE("lt", a, 0, LVAL_NUM);
+  LASSERT_TYPE("lt", a, 1, LVAL_NUM);
+
+  lval* left  = lval_pop(a, 0);
+  lval* right = lval_pop(a, 0);
+
+  lval* result;
+  if (left->num < right->num) { 
+    result = lval_num(1);
+  } else {
+    result = lval_num(0);
+  }
+
+  return result;
+}
+
+lval* builtin_le(lenv* e, lval* a) { 
+  LASSERT_ARG_COUNT("le", a, 2);
+  LASSERT_TYPE("le", a, 0, LVAL_NUM);
+  LASSERT_TYPE("le", a, 1, LVAL_NUM);
+
+  lval* left  = lval_pop(a, 0);
+  lval* right = lval_pop(a, 0);
+
+  lval* result;
+  if (left->num <= right->num) { 
+    result = lval_num(1);
+  } else {
+    result = lval_num(0);
+  }
+
+  return result;
+}
+
+lval* builtin_eq(lenv* e, lval* a) { 
+  LASSERT_ARG_COUNT("eq", a, 2);
+
+  lval* left  = lval_pop(a, 0);
+  lval* right = lval_pop(a, 0);
+
+  lval* result = lval_eq(left, right);
+
+  lval_del(a);
+
+  return result;
+}
+
+lval* builtin_ne(lenv* e, lval* a) { 
+  LASSERT_ARG_COUNT("eq", a, 2);
+
+  lval* left  = lval_pop(a, 0);
+  lval* right = lval_pop(a, 0);
+
+  lval* result = lval_eq(left, right);
+
+  if (result->num == 0) {
+    result->num = 1;
+  } else {
+    result->num = 0;
+  }
+
+  lval_del(a);
+
+  return result;
+}
+
+lval* lval_eq(lval* left, lval* right) { 
+  if (left->type != right->type) { 
+    return lval_num(0); 
+  }
+
+  switch(left->type) { 
+  case LVAL_NUM:
+    if (left->num == right->num) { 
+      return lval_num(1);
+    } else {
+      return lval_num(0);
+    }
+  case LVAL_SYM:
+    if (strcmp(left->sym, right->sym) == 0) { 
+      return lval_num(1);
+    } else {
+      return lval_num(0);
+    }
+  case LVAL_FUN:
+    if (left->builtin == right->builtin) {
+      return lval_num(1);
+    } else {
+      if ((lval_eq(left->formals, right->formals)->num == 0) &&
+        (lval_eq(left->body, right->body)->num == 0))
+      return lval_num(0);
+    }
+  case LVAL_SEXPR:
+  case LVAL_QEXPR:
+    if (left->count != right->count) { 
+      return lval_num(0);
+    } 
+
+    for (int i = 0; i < left->count; i++) { 
+      if ((lval_eq(left->cell[i], right->cell[i]))->num == 0) {
+        return lval_num(0);
+      }
+    }
+    return lval_num(1);
+  }
+
+  return lval_num(0);
 }
 
 lval* lval_call(lenv* e, lval* f, lval* a) {
@@ -831,13 +987,26 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "def", builtin_def);
   lenv_add_builtin(e, "=", builtin_put);
 
-  /* Other Functions */
+  /* Conditional Functions */
   lenv_add_builtin(e, "if", builtin_if);
+  lenv_add_builtin(e, "gt", builtin_gt);
+  lenv_add_builtin(e, ">",  builtin_gt);
+  lenv_add_builtin(e, "ge", builtin_ge);
+  lenv_add_builtin(e, ">=", builtin_ge);
+  lenv_add_builtin(e, "lt", builtin_lt);
+  lenv_add_builtin(e, "<",  builtin_lt);
+  lenv_add_builtin(e, "le", builtin_le);
+  lenv_add_builtin(e, "<=", builtin_le);
+  lenv_add_builtin(e, "eq", builtin_eq);
+  lenv_add_builtin(e, "==", builtin_eq);
+  lenv_add_builtin(e, "ne", builtin_ne);
+  lenv_add_builtin(e, "!=", builtin_ne);
+
+  /* Other Functions */
   lenv_add_builtin(e, "exit", builtin_exit);
 }
 
 /* Evaluation */
-
 lval* lval_eval_sexpr(lenv* e, lval* v) {
 
   /* Evaluate Children */
