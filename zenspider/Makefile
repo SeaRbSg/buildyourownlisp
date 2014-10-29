@@ -11,6 +11,7 @@ all: \
 	ch10 \
 	ch11 \
 	ch12 \
+	ch13 \
 	$(NULL)
 
 ch04: ch04.c
@@ -30,6 +31,8 @@ ch10: ch10.c mpc.c
 ch11: ch11.c mpc.c
 
 ch12: ch12.c mpc.c
+
+ch13: ch13.c mpc.c
 
 .PHONY: clean realclean
 clean:

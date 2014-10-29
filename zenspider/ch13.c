@@ -133,7 +133,7 @@ struct lenv {
 
 // prototypes -- via cproto -- I'm not a masochist.
 
-/* ch12.c */
+/* ch13.c */
 lval *lval_new(void);
 lval *lval_err(char *fmt, ...);
 lval *lval_fun(lbuiltin *func);
@@ -146,7 +146,8 @@ lval *lval_copy(lval *v);
 void lval_del(lval *v);
 lval *lval_add(lval *v, lval *x);
 lval *lval_call(lenv *e, lval *f, lval *a);
-lval *lval_cons(lval *x, lval *s);
+lval *lval_cons(lval *x, lval *xs);
+int lval_eq(lval *x, lval *y);
 lval *lval_join(lval *x, lval *y);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
@@ -169,8 +170,10 @@ lval *builtin_cons(lenv *e, lval *a);
 lval *builtin_def(lenv *e, lval *a);
 lval *builtin_div(lenv *e, lval *a);
 lval *builtin_eval(lenv *e, lval *a);
+lval *builtin_eq(lenv *e, lval *a);
 lval *builtin_exp(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
+lval *builtin_if(lenv *e, lval *a);
 lval *builtin_join(lenv *e, lval *a);
 lval *builtin_lambda(lenv *e, lval *a);
 lval *builtin_len(lenv *e, lval *a);
@@ -179,9 +182,14 @@ lval *builtin_max(lenv *e, lval *a);
 lval *builtin_min(lenv *e, lval *a);
 lval *builtin_mod(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
+lval *builtin_ne(lenv *e, lval *a);
 lval *builtin_put(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
+lval *builtin_gt(lenv *e, lval *a);
+lval *builtin_lt(lenv *e, lval *a);
+lval *builtin_ge(lenv *e, lval *a);
+lval *builtin_le(lenv *e, lval *a);
 char *lval_type_name(int t);
 void lval_print(lval *v);
 void lval_print_expr(lval *v, char open, char close);
@@ -403,6 +411,35 @@ lval* lval_cons(lval* x, lval *xs) {
   return xs;
 }
 
+int lval_eq(lval* x, lval* y) {
+  if (L_TYPE(x) != L_TYPE(y)) return 0;
+
+  switch (L_TYPE(x)) {
+  case LVAL_NUM:
+    return L_NUM(x) == L_NUM(y);
+  case LVAL_ERR:
+    return LOOKUP(L_ERR(x), L_ERR(y));
+  case LVAL_SYM:
+    return LOOKUP(L_SYM(x), L_SYM(y));
+  case LVAL_FUN:
+    return L_CFUN(x) == L_CFUN(y);
+  case LVAL_LAM:
+    return lval_eq(L_FORM(x), L_FORM(y)) && lval_eq(L_BODY(x), L_BODY(y));
+  case LVAL_QEXP:
+  case LVAL_SEXP:
+    if (L_COUNT(x) != L_COUNT(y)) return 0;
+    FOREACH_SEXP(i, x) {
+      if (!lval_eq(L_CELL_N(x, i), L_CELL_N(y, i))) return 0;
+    }
+    return 1;
+    break;
+  default:
+    printf("Unknown lval type: %d", L_TYPE(x));
+    return 0;
+    break;
+  }
+}
+
 lval* lval_join(lval* x, lval* y) {
   while (L_COUNT(y)) {
     x = lval_add(x, lval_pop(y, 0));
@@ -572,6 +609,14 @@ void lenv_add_builtins(lenv *e) {
   lenv_add_builtin(e, "=",      builtin_put);
   lenv_add_builtin(e, "-",      builtin_sub);
   lenv_add_builtin(e, "tail",   builtin_tail);
+
+  lenv_add_builtin(e, ">",      builtin_gt);
+  lenv_add_builtin(e, "<",      builtin_lt);
+  lenv_add_builtin(e, ">=",     builtin_ge);
+  lenv_add_builtin(e, ">=",     builtin_le);
+  lenv_add_builtin(e, "==",     builtin_eq);
+  lenv_add_builtin(e, "!=",     builtin_ne);
+  lenv_add_builtin(e, "if",     builtin_if);
 }
 
 /*
@@ -704,10 +749,35 @@ BUILTIN(eval) {
   return lval_eval(e, x);
 }
 
+BUILTIN(eq) {
+  CHECK_ARITY("==", a, 2);
+
+  lval *m = lval_pop(a, 0);
+  lval *n = lval_pop(a, 0);
+
+  int r = lval_eq(m, n);
+
+  lval_del(a);
+
+  return lval_num(r);
+}
+
 BUILTIN(exp) {
   CHECK_FOR_NUMBERS(a);
   FOREACH_NUMBER(a, result, n, L_NUM(result) ^= n);
   return result;
+}
+
+BUILTIN(ge) {
+  CHECK_ARITY(">=", a, 2);
+  CHECK_FOR_NUMBERS(a);
+  return lval_num(L_CELL_N(a, 0) >= L_CELL_N(a, 1));
+}
+
+BUILTIN(gt) {
+  CHECK_ARITY(">", a, 2);
+  CHECK_FOR_NUMBERS(a);
+  return lval_num(L_CELL_N(a, 0) > L_CELL_N(a, 1));
 }
 
 BUILTIN(head) {
@@ -722,6 +792,31 @@ BUILTIN(head) {
   }
 
   return v;
+}
+
+BUILTIN(if) {
+  CHECK_ARITY("if", a, 3);
+  CHECK_TYPE("if", a, 0, LVAL_NUM);
+  CHECK_TYPE("if", a, 1, LVAL_QEXP);
+  CHECK_TYPE("if", a, 2, LVAL_QEXP);
+
+  lval* c = lval_pop(a, 0);
+  lval* t = lval_pop(a, 0);
+  lval* f = lval_pop(a, 0);
+  lval* r;
+
+  L_TYPE(t) = LVAL_SEXP;
+  L_TYPE(f) = LVAL_SEXP;
+
+  if (L_NUM(c)) {
+    r = lval_eval(e, t);
+  } else {
+    r = lval_eval(e, f);
+  }
+
+  lval_del(a);
+
+  return r;
 }
 
 BUILTIN(join) {
@@ -756,6 +851,12 @@ BUILTIN(lambda) {
   return lval_lambda(formals, body);
 }
 
+BUILTIN(le) {
+  CHECK_ARITY("<=", a, 2);
+  CHECK_FOR_NUMBERS(a);
+  return lval_num(L_CELL_N(a, 0) <= L_CELL_N(a, 1));
+}
+
 BUILTIN(len) {
   return lval_num(L_COUNT_N(a, 0));
 }
@@ -764,6 +865,12 @@ BUILTIN(list) {
   L_TYPE(a) = LVAL_QEXP; // TODO: these are all mutating lval. HORRIBLE.
 
   return a;
+}
+
+BUILTIN(lt) {
+  CHECK_ARITY("<", a, 2);
+  CHECK_FOR_NUMBERS(a);
+  return lval_num(L_CELL_N(a, 0) < L_CELL_N(a, 1));
 }
 
 BUILTIN(max) {
@@ -788,6 +895,19 @@ BUILTIN(mul) {
   CHECK_FOR_NUMBERS(a);
   FOREACH_NUMBER(a, result, n, L_NUM(result) *= n);
   return result;
+}
+
+BUILTIN(ne) {
+  CHECK_ARITY("!=", a, 2);
+
+  lval *m = lval_pop(a, 0);
+  lval *n = lval_pop(a, 0);
+
+  int r = lval_eq(m, n);
+
+  lval_del(a);
+
+  return lval_num(!r);
 }
 
 BUILTIN(put) {
