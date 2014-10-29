@@ -193,6 +193,7 @@ lval *builtin_min(lenv *e, lval *a);
 lval *builtin_mod(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
 lval *builtin_ne(lenv *e, lval *a);
+lval *builtin_print(lenv *e, lval *a);
 lval *builtin_put(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
@@ -637,6 +638,7 @@ void lenv_add_builtins(lenv *e) {
   lenv_add_builtin(e, "=",      builtin_put);
   lenv_add_builtin(e, "-",      builtin_sub);
   lenv_add_builtin(e, "tail",   builtin_tail);
+  lenv_add_builtin(e, "print",  builtin_print);
 
   lenv_add_builtin(e, ">",      builtin_gt);
   lenv_add_builtin(e, "<",      builtin_lt);
@@ -979,6 +981,17 @@ BUILTIN(ne) {
   lval_del(a);
 
   return lval_num(!r);
+}
+
+BUILTIN(print) {
+  FOREACH_SEXP(i, a) {
+    lval_print(L_CELL_N(a, i));
+    putchar(' ');
+  }
+  putchar('\n');
+  lval_del(a);
+
+  return lval_sexp();
 }
 
 BUILTIN(put) {
