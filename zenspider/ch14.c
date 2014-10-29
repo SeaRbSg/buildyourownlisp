@@ -1108,7 +1108,7 @@ int main() {
   mpc_parser_t* Number   = mpc_new("number");
   mpc_parser_t* Symbol   = mpc_new("symbol");
   mpc_parser_t* String   = mpc_new("string");
-  mpc_parser_t* Comment  = mpc_new("Comment");
+  mpc_parser_t* Comment  = mpc_new("comment");
   mpc_parser_t* Sexp     = mpc_new("sexp");
   mpc_parser_t* Qexp     = mpc_new("qexp");
   mpc_parser_t* Expr     = mpc_new("expr");
