@@ -25,7 +25,7 @@ typedef struct lval lval;
 typedef struct lenv lenv;
 
 /** Lisp Value **/
-enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
+enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR, LVAL_BOOL };
 
 /** Types **/
 
@@ -197,9 +197,17 @@ lval* lval_qexpr(void) {
   return v;
 }
 
+lval* lval_bool(int num) { 
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_BOOL;
+  v->num = num;
+  return v;
+}
+
 void lval_del(lval* v) {
   switch (v->type) {
   case LVAL_NUM: break;
+  case LVAL_BOOL: break;
   case LVAL_FUN:
     if (!v->builtin) {
         lenv_del(v->env);
@@ -240,6 +248,7 @@ lval* lval_copy(lval* v) {
     }
     break;
   case LVAL_NUM:
+  case LVAL_BOOL:
     x->num = v->num;
     break;
 
@@ -327,6 +336,13 @@ void lval_print(lval* v) {
   case LVAL_NUM:
     printf("%li", v->num);
     break;
+  case LVAL_BOOL:
+    if (v->num == 0) { 
+      printf("false");
+    } else {
+      printf("true");
+    }
+    break;
   case LVAL_ERR:
     printf("Error: %s", v->err);
     break;
@@ -353,6 +369,8 @@ char* ltype_name(int t) {
     return "Function";
   case LVAL_NUM:
     return "Number";
+  case LVAL_BOOL:
+    return "Boolean";
   case LVAL_ERR:
     return "Error";
   case LVAL_SYM:
@@ -729,9 +747,9 @@ lval* builtin_gt(lenv* e, lval* a) {
 
   lval* result;
   if (left->num > right->num) {
-    result = lval_num(1);
+    result = lval_bool(1);
   } else {
-    result = lval_num(0);
+    result = lval_bool(0);
   }
 
   return result;
@@ -747,9 +765,9 @@ lval* builtin_ge(lenv* e, lval* a) {
 
   lval* result;
   if (left->num >= right->num) {
-    result = lval_num(1);
+    result = lval_bool(1);
   } else {
-    result = lval_num(0);
+    result = lval_bool(0);
   }
 
   return result;
@@ -765,9 +783,9 @@ lval* builtin_lt(lenv* e, lval* a) {
 
   lval* result;
   if (left->num < right->num) { 
-    result = lval_num(1);
+    result = lval_bool(1);
   } else {
-    result = lval_num(0);
+    result = lval_bool(0);
   }
 
   return result;
@@ -783,9 +801,9 @@ lval* builtin_le(lenv* e, lval* a) {
 
   lval* result;
   if (left->num <= right->num) { 
-    result = lval_num(1);
+    result = lval_bool(1);
   } else {
-    result = lval_num(0);
+    result = lval_bool(0);
   }
 
   return result;
@@ -825,45 +843,46 @@ lval* builtin_ne(lenv* e, lval* a) {
 
 lval* lval_eq(lval* left, lval* right) { 
   if (left->type != right->type) { 
-    return lval_num(0); 
+    return lval_bool(0); 
   }
 
   switch(left->type) { 
   case LVAL_NUM:
+  case LVAL_BOOL:
     if (left->num == right->num) { 
-      return lval_num(1);
+      return lval_bool(1);
     } else {
-      return lval_num(0);
+      return lval_bool(0);
     }
   case LVAL_SYM:
     if (strcmp(left->sym, right->sym) == 0) { 
-      return lval_num(1);
+      return lval_bool(1);
     } else {
-      return lval_num(0);
+      return lval_bool(0);
     }
   case LVAL_FUN:
     if (left->builtin == right->builtin) {
-      return lval_num(1);
+      return lval_bool(1);
     } else {
       if ((lval_eq(left->formals, right->formals)->num == 0) &&
         (lval_eq(left->body, right->body)->num == 0))
-      return lval_num(0);
+      return lval_bool(0);
     }
   case LVAL_SEXPR:
   case LVAL_QEXPR:
     if (left->count != right->count) { 
-      return lval_num(0);
+      return lval_bool(0);
     } 
 
     for (int i = 0; i < left->count; i++) { 
       if ((lval_eq(left->cell[i], right->cell[i]))->num == 0) {
-        return lval_num(0);
+        return lval_bool(0);
       }
     }
-    return lval_num(1);
+    return lval_bool(1);
   }
 
-  return lval_num(0);
+  return lval_bool(0);
 }
 
 lval* lval_call(lenv* e, lval* f, lval* a) {
