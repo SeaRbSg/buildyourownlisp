@@ -133,7 +133,7 @@ struct lenv {
 
 // prototypes -- via cproto -- I'm not a masochist.
 
-/* ch13.c */
+/* ch14.c */
 lval *lval_new(void);
 lval *lval_err(char *fmt, ...);
 lval *lval_fun(lbuiltin *func);
@@ -172,12 +172,16 @@ lval *builtin_div(lenv *e, lval *a);
 lval *builtin_eval(lenv *e, lval *a);
 lval *builtin_eq(lenv *e, lval *a);
 lval *builtin_exp(lenv *e, lval *a);
+lval *builtin_ge(lenv *e, lval *a);
+lval *builtin_gt(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
 lval *builtin_if(lenv *e, lval *a);
 lval *builtin_join(lenv *e, lval *a);
 lval *builtin_lambda(lenv *e, lval *a);
+lval *builtin_le(lenv *e, lval *a);
 lval *builtin_len(lenv *e, lval *a);
 lval *builtin_list(lenv *e, lval *a);
+lval *builtin_lt(lenv *e, lval *a);
 lval *builtin_max(lenv *e, lval *a);
 lval *builtin_min(lenv *e, lval *a);
 lval *builtin_mod(lenv *e, lval *a);
@@ -186,10 +190,6 @@ lval *builtin_ne(lenv *e, lval *a);
 lval *builtin_put(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
-lval *builtin_gt(lenv *e, lval *a);
-lval *builtin_lt(lenv *e, lval *a);
-lval *builtin_ge(lenv *e, lval *a);
-lval *builtin_le(lenv *e, lval *a);
 char *lval_type_name(int t);
 void lval_print(lval *v);
 void lval_print_expr(lval *v, char open, char close);
