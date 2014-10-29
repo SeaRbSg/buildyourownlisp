@@ -8,6 +8,8 @@
 
 #define ERR_BUF_SIZE 512
 
+#define STD_LIB "stdlib.lispy"
+
 #define STR_EQ(A,B)   (strcmp(A,B) == 0)
 #define STR_CONTAINS(A,B)   (strstr(A,B))
 #define MIN(X,Y)    ((X < Y) ? X : Y)
@@ -1312,6 +1314,9 @@ int main(int argc, char** argv) {
     lenv* e = lenv_new();
     lenv_add_builtins(e);
 
+    /* load standard library */
+    lval* r = builtin_load(e, lval_add(lval_sexpr(), lval_str(STD_LIB)));
+    lval_del(r);
 
     if (argc == 1) {
         while(1) {

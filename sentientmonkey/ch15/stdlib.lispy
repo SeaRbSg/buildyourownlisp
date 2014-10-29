@@ -1,1 +1,39 @@
-; TODO
+; Standard library for lispy
+
+; Atoms
+(def {ok} "ok")
+(def {nil} {})
+(def {true} 1)
+(def {false} 0)
+
+; Function Definitions
+(def {fun}
+  (\ {f b}
+    {def (head f) (\ (tail f) b)}))
+
+; Unpack for functions
+(fun {unpack f l} {
+  eval (join (list f) l)
+})
+
+(fun {pack f & xs} {f xs})
+
+; Curried and Uncurried calling
+(def {curry} unpack)
+(def {uncurry} pack)
+
+; Perform Several things in Sequence
+(fun {do & l} {
+  (if (== l nil)
+    {nil}
+    {last l}) })
+
+; Open new scope
+(fun {let b} {
+  ((\ {_} b) ()) })
+
+; Logical functions
+(fun {not x} {- 1 x})
+(fun {or x y} {+ x y})
+(fun {and x y} {* x y})
+

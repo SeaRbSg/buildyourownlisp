@@ -1,0 +1,22 @@
+(fun {assert-eq a b} {
+  (if (== a b)
+    { show "." }
+    { show "F" }) })
+
+(fun {skip x} {
+  (show "S") })
+
+(assert-eq nil {})
+(assert-eq true 1)
+(assert-eq false 0)
+
+(assert-eq (not true) false)
+(assert-eq (or true false) true)
+(assert-eq (or false true) true)
+(assert-eq (and true false) false)
+(assert-eq (and false true) false)
+(assert-eq (and true true) true)
+
+(assert-eq (eval {curry + {5 6 7}}) 18)
+
+(skip {(assert-eq (eval {let {do (= {x} 100) (x) } }) 100)})

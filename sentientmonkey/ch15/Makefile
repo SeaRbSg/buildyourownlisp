@@ -16,6 +16,12 @@ lispy: prototypes.c lispy.c mpc.c
 run: lispy
 	./lispy
 
+test: lispy
+	./lispy tests.lispy
+
+debug: lispy
+	lldb lispy
+
 clean:
 	rm -Rf lispy
 	rm -Rf prototypes.c
