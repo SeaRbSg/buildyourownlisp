@@ -176,6 +176,7 @@ lval *builtin_def(lenv *e, lval *a);
 lval *builtin_div(lenv *e, lval *a);
 lval *builtin_eval(lenv *e, lval *a);
 lval *builtin_eq(lenv *e, lval *a);
+lval *builtin_error(lenv *e, lval *a);
 lval *builtin_exp(lenv *e, lval *a);
 lval *builtin_ge(lenv *e, lval *a);
 lval *builtin_gt(lenv *e, lval *a);
@@ -624,6 +625,7 @@ void lenv_add_builtins(lenv *e) {
   lenv_add_builtin(e, "def",    builtin_def);
   lenv_add_builtin(e, "/",      builtin_div);
   lenv_add_builtin(e, "==",     builtin_eq);
+  lenv_add_builtin(e, "error",  builtin_error);
   lenv_add_builtin(e, "eval",   builtin_eval);
   lenv_add_builtin(e, "^",      builtin_exp);
   lenv_add_builtin(e, ">=",     builtin_ge);
@@ -799,6 +801,17 @@ BUILTIN(eq) {
   lval_del(a);
 
   return lval_num(r);
+}
+
+BUILTIN(error) {
+  CHECK_ARITY("error", a, 1);
+  CHECK_TYPE("error", a, 0, LVAL_STR);
+
+  lval* err = lval_err(L_STR(L_CELL_N(a, 0)));
+
+  lval_del(a);
+
+  return err;
 }
 
 BUILTIN(exp) {
