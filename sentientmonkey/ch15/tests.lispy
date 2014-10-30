@@ -12,6 +12,11 @@
 (fun {skip x} {
   (display "S") })
 
+; builtin concat
+(assert-eq (concat "1" "2" "3") "123")
+(assert-eq (concat "1" "2") "12")
+(assert-eq (concat "1") "1")
+
 ; Primitives!
 (assert-eq nil {})
 (assert-eq true 1)
@@ -69,8 +74,17 @@
 (assert-eq (month-day-suffix 3) "rd")
 (assert-eq (month-day-suffix 4) "th")
 
-; builtin concat
-(assert-eq (concat "1" "2" "3") "123")
-(assert-eq (concat "1" "2") "12")
-(assert-eq (concat "1") "1")
+(fun {day-name x}
+     {case x
+        {0 "Monday"}
+        {1 "Tuesday"}
+        {2 "Wednesday"}
+        {3 "Thursday"}
+        {4 "Friday"}
+        {5 "Saturday"}
+        {6 "Sunday"}})
 
+(assert-eq (day-name 0) "Monday")
+(assert-eq (day-name 6) "Sunday")
+
+(assert-eq (fib 10) 12)

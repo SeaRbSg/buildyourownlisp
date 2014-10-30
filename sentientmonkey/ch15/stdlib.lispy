@@ -109,9 +109,24 @@
 (fun {sum l} {foldl + 0 l})
 (fun {product l} {foldl * 1 l})
 
+; Conditionals
 (fun {select & cs}
      {if (== cs nil)
         {error "No Selection Found"}
         {if (fst (fst cs)) {snd (fst cs)} {unpack select (tail cs)}}})
 
 (def {otherwise} true)
+
+(fun {case x & cs}
+     {if (== cs nil)
+        {error "No Case Found"}
+        {if (== x (fst (fst cs)))
+            {snd (fst cs)}
+            {unpack case (join (list x) (tail cs))}}})
+
+; Fibonacci
+(fun {fib n}
+     {select
+        { (== n 0) {0} }
+        { (== n 1) {1} }
+        { otherwise {+ (fib (- n 1)) (fib (- n 2))}}})
