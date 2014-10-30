@@ -1052,8 +1052,8 @@ lval* builtin_print(lenv* e, lval* a) {
     return lval_ok();
 }
 
-lval* builtin_puts(lenv* e, lval* a) {
-    LCHECK_COUNT("puts", a, 1);
+lval* builtin_display(lenv* e, lval* a) {
+    LCHECK_COUNT("display", a, 1);
     lval* x = lval_pop(a, 0);
 
     if (x->type == LVAL_STR) {
@@ -1125,6 +1125,24 @@ lval* builtin_read(lenv* e, lval* a) {
     return x;
 }
 
+lval* builtin_concat(lenv* e, lval* a) {
+    LCHECK_ALL_TYPES("concat", a, LVAL_STR);
+
+    lval* s = lval_pop(a, 0);
+    lval* x;
+    if (a->count > 0) {
+        for (int i=0; i < a->count+1; i++) {
+            x = lval_pop(a, 0);
+            s->str = realloc(s->str, strlen(s->str)+strlen(x->str)+1);
+            strcat(s->str, x->str);
+        }
+    }
+
+    lval_del(a);
+
+    return s;
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
     lval* k = lval_sym(name);
     lval* v = lval_fun(name, func);
@@ -1182,7 +1200,8 @@ void lenv_add_builtins(lenv* e) {
     lenv_add_builtin(e, "show", builtin_show);
     lenv_add_builtin(e, "read", builtin_read);
     lenv_add_builtin(e, "parse", builtin_parse);
-    lenv_add_builtin(e, "puts", builtin_puts);
+    lenv_add_builtin(e, "display", builtin_display);
+    lenv_add_builtin(e, "concat", builtin_concat);
 }
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {

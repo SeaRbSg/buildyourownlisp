@@ -1,11 +1,16 @@
 ; Basic test functions
 (fun {assert-eq a b} {
   (if (== a b)
-    { puts "." }
-    { do (puts "\nFailed: Expected ") (puts a) (puts ", got ") (puts b) (puts "\n")}) })
+    {display "."}
+    {do (display "\n")
+        (display "Failed: Got ")
+        (display a)
+        (display ", expected ")
+        (display b)
+        (display "\n")})})
 
 (fun {skip x} {
-  (puts "S") })
+  (display "S") })
 
 ; Primitives!
 (assert-eq nil {})
@@ -38,4 +43,34 @@
 (assert-eq (drop 2 {1 2 3}) {3})
 
 (assert-eq (split 2 {1 2 3 4}) {{1 2} {3 4}})
-(skip {(assert-eq (elem 2 {1 2 3} true))})
+(assert-eq (elem 2 {1 2 3}) true)
+(assert-eq (elem 7 {1 2 3}) false)
+
+; Map
+(assert-eq (map - {5 6 7 8 2 22 44}) {-5 -6 -7 -8 -2 -22 -44})
+(assert-eq (map (\ {x} {+ x 10}) {5 2 11}) {15 12 21})
+
+; Filter
+(assert-eq (filter (\ {x} {> x 2}) {5 2 11 -7 8 1}) {5 11 8})
+
+; sum
+(assert-eq (sum {1 2 3}) 6)
+(assert-eq (product {1 2 3 4}) 24)
+
+(fun {month-day-suffix i}
+     {select
+        {(== i 0) "st"}
+        {(== i 1) "nd"}
+        {(== i 3) "rd"}
+        {otherwise "th"}})
+
+(assert-eq (month-day-suffix 0) "st")
+(assert-eq (month-day-suffix 1) "nd")
+(assert-eq (month-day-suffix 3) "rd")
+(assert-eq (month-day-suffix 4) "th")
+
+; builtin concat
+(assert-eq (concat "1" "2" "3") "123")
+(assert-eq (concat "1" "2") "12")
+(assert-eq (concat "1") "1")
+

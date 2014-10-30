@@ -87,3 +87,31 @@
        {if (== x (fst l))
           {true}
           {elem x (tail l)}}) })
+
+; Apply funciton to list
+(fun {map f l}
+     {if (== l nil)
+        {nil}
+        {join (list (f (fst l))) (map f (tail l))}})
+
+; Apply filter to list
+(fun {filter f l}
+    {if (== l nil)
+        {nil}
+        {join (if (f (fst l)) {head l} {nil}) (filter f (tail l))}})
+
+; Fold left
+(fun {foldl f z l}
+     {if (== l nil)
+        {z}
+        {foldl f (f z (fst l)) (tail l)}})
+
+(fun {sum l} {foldl + 0 l})
+(fun {product l} {foldl * 1 l})
+
+(fun {select & cs}
+     {if (== cs nil)
+        {error "No Selection Found"}
+        {if (fst (fst cs)) {snd (fst cs)} {unpack select (tail cs)}}})
+
+(def {otherwise} true)
