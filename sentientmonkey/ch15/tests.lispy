@@ -87,4 +87,4 @@
 (assert-eq (day-name 0) "Monday")
 (assert-eq (day-name 6) "Sunday")
 
-(assert-eq (fib 10) 12)
+(assert-eq (fib 10) 55)
