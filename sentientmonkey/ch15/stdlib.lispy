@@ -113,7 +113,9 @@
 (fun {select & cs}
      {if (== cs nil)
         {error "No Selection Found"}
-        {if (fst (fst cs)) {snd (fst cs)} {unpack select (tail cs)}}})
+        {if (fst (fst cs))
+            {eval (snd (fst cs))}
+            {unpack select (tail cs)}}})
 
 (def {otherwise} true)
 
@@ -124,9 +126,27 @@
             {snd (fst cs)}
             {unpack case (join (list x) (tail cs))}}})
 
+(fun {month-day-suffix i}
+     {select
+        {(== i 0) {"st"}}
+        {(== i 1) {"nd"}}
+        {(== i 3) {"rd"}}
+        {otherwise {"th"}}})
+
+(fun {day-name x}
+     {case x
+        {0 "Monday"}
+        {1 "Tuesday"}
+        {2 "Wednesday"}
+        {3 "Thursday"}
+        {4 "Friday"}
+        {5 "Saturday"}
+        {6 "Sunday"}})
+
 ; Fibonacci
 (fun {fib n}
      {select
         { (== n 0) {0} }
         { (== n 1) {1} }
-        { otherwise {+ (fib (- n 1)) (fib (- n 2))}}})
+        { otherwise {+ (fib (- n 1))
+                       (fib (- n 2))}}})

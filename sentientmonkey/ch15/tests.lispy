@@ -3,6 +3,7 @@
   (if (== a b)
     {display "."}
     {do (display "\n")
+        (display s)
         (display "Failed: Got ")
         (display a)
         (display ", expected ")
@@ -62,27 +63,10 @@
 (assert-eq (sum {1 2 3}) 6)
 (assert-eq (product {1 2 3 4}) 24)
 
-(fun {month-day-suffix i}
-     {select
-        {(== i 0) "st"}
-        {(== i 1) "nd"}
-        {(== i 3) "rd"}
-        {otherwise "th"}})
-
 (assert-eq (month-day-suffix 0) "st")
 (assert-eq (month-day-suffix 1) "nd")
 (assert-eq (month-day-suffix 3) "rd")
 (assert-eq (month-day-suffix 4) "th")
-
-(fun {day-name x}
-     {case x
-        {0 "Monday"}
-        {1 "Tuesday"}
-        {2 "Wednesday"}
-        {3 "Thursday"}
-        {4 "Friday"}
-        {5 "Saturday"}
-        {6 "Sunday"}})
 
 (assert-eq (day-name 0) "Monday")
 (assert-eq (day-name 6) "Sunday")
