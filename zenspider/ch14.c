@@ -1193,7 +1193,13 @@ int main(int argc, char** argv) {
     add_history(input);
 
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
-      lval* x = lval_eval(env, lval_read(r.output));
+      lval* sexp = lval_read(r.output);
+      if (L_COUNT(sexp) == 0) { // null
+        lval_del(sexp);
+        continue;
+      }
+
+      lval* x = lval_eval(env, sexp);
       lval_println(x);
       lval_del(x);
 
