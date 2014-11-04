@@ -905,7 +905,7 @@ BUILTIN(lambda) {
   CHECK_TYPE("lambda", a, 0, LVAL_QEXP);
   CHECK_TYPE("lambda", a, 1, LVAL_QEXP);
 
-  FOREACH_SEXP(i, a) {
+  FOREACH_SEXP(i, L_CELL_N(a, 0)) {
     CHECK_TYPE("lambda args", L_CELL_N(a, 0), i, LVAL_SYM); // TODO: refactor
   }
 
