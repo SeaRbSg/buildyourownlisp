@@ -44,6 +44,9 @@ clean:
 realclean: clean
 	rm -f ch?? *.o
 
+leaks: ch14
+	valgrind --leak-check=full ./ch14 leaks.lisp < /dev/null
+
 # depend:
 # 	mkdep -p ${CFLAGS} ch12.c mpc.c
 # 
