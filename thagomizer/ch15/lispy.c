@@ -61,7 +61,7 @@ mpc_parser_t* Expr;
 mpc_parser_t* Lispy;
 
 /** Forward Function Declaration **/
-/* ch15/lispy.c */
+/* ch14/lispy.c */
 lval *lval_num(long x);
 lval *lval_lambda(lval *formals, lval *body);
 lval *lval_err(char *fmt, ...);
