@@ -825,13 +825,13 @@ BUILTIN(exp) {
 BUILTIN(ge) {
   CHECK_ARITY(">=", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_CELL_N(a, 0) >= L_CELL_N(a, 1));
+  return lval_num(L_NUM(L_CELL_N(a, 0)) >= L_NUM(L_CELL_N(a, 1)));
 }
 
 BUILTIN(gt) {
   CHECK_ARITY(">", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_CELL_N(a, 0) > L_CELL_N(a, 1));
+  return lval_num(L_NUM(L_CELL_N(a, 0)) > L_NUM(L_CELL_N(a, 1)));
 }
 
 BUILTIN(head) {
@@ -908,7 +908,7 @@ BUILTIN(lambda) {
 BUILTIN(le) {
   CHECK_ARITY("<=", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_CELL_N(a, 0) <= L_CELL_N(a, 1));
+  return lval_num(L_NUM(L_CELL_N(a, 0)) <= L_NUM(L_CELL_N(a, 1)));
 }
 
 BUILTIN(len) {
@@ -957,7 +957,7 @@ BUILTIN(load) {
 BUILTIN(lt) {
   CHECK_ARITY("<", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_CELL_N(a, 0) < L_CELL_N(a, 1));
+  return lval_num(L_NUM(L_CELL_N(a, 0)) < L_NUM(L_CELL_N(a, 1)));
 }
 
 BUILTIN(max) {
