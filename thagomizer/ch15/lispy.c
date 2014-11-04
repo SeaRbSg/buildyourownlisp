@@ -582,6 +582,7 @@ lval* builtin_load(lenv* e, lval* a) {
 
   /* Parse File given by string name */
   mpc_result_t r;
+
   if (mpc_parse_contents(a->cell[0]->str, Lispy, &r)) {
     /* Read contents */
     lval* expr = lval_read(r.output);
@@ -1261,14 +1262,14 @@ lval* lval_read(mpc_ast_t* t) {
 }
 
 int main(int argc, char** argv) {
-  mpc_parser_t* Number   = mpc_new("number");
-  mpc_parser_t* Symbol   = mpc_new("symbol");
-  mpc_parser_t* String   = mpc_new("string");
-  mpc_parser_t* Comment  = mpc_new("comment");
-  mpc_parser_t* Sexpr    = mpc_new("sexpr");
-  mpc_parser_t* Qexpr    = mpc_new("qexpr");
-  mpc_parser_t* Expr     = mpc_new("expr");
-  mpc_parser_t* Lispy    = mpc_new("lispy");
+  Number   = mpc_new("number");
+  Symbol   = mpc_new("symbol");
+  String   = mpc_new("string");
+  Comment  = mpc_new("comment");
+  Sexpr    = mpc_new("sexpr");
+  Qexpr    = mpc_new("qexpr");
+  Expr     = mpc_new("expr");
+  Lispy    = mpc_new("lispy");
 
   mpca_lang(MPCA_LANG_DEFAULT,
             "                                                                 \
@@ -1278,13 +1279,39 @@ int main(int argc, char** argv) {
             string   :  /\"(\\\\.|[^\"])*\"/ ;                                \
             sexpr    : '(' <expr>* ')' ;                                      \
             qexpr    : '{' <expr>* '}' ;                                      \
-            expr     : <number> | <symbol> | <string> | <sexpr> | <qexpr> ;   \
+            expr     : <number> | <symbol> | <string> | <comment> | <sexpr> | <qexpr> ;   \
             lispy    : /^/ <expr>* /$/ ;                                      \
             ",
             Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy);
 
   lenv* e = lenv_new();
   lenv_add_builtins(e);
+
+  if (argc == 1) { 
+    while (1) {
+      char* input = readline("lispy> ");
+      add_history(input);
+
+      mpc_result_t r;
+
+      if (mpc_parse("<stdin>", input, Lispy, &r)) {
+        /*      mpc_ast_print(r.output); */
+
+        lval* x = lval_eval(e, lval_read(r.output));
+        lval_println(x);
+        lval_del(x);
+
+        mpc_ast_delete(r.output);
+      } else {
+        /* Error */
+        mpc_err_print(r.error);
+        mpc_err_delete(r.error);
+      }
+
+      free(input);
+
+    }
+  }
 
   /* Supplied with list of files */
   if (argc >= 2) {
@@ -1306,29 +1333,6 @@ int main(int argc, char** argv) {
     }
   }
 
-
-  while (1) {
-    char* input = readline("lispy> ");
-    add_history(input);
-
-    mpc_result_t r;
-
-    if (mpc_parse("<stdin>", input, Lispy, &r)) {
-      /*      mpc_ast_print(r.output); */
-
-      lval* x = lval_eval(e, lval_read(r.output));
-      lval_println(x);
-      lval_del(x);
-
-      mpc_ast_delete(r.output);
-    } else {
-      /* Error */
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
-    }
-
-    free(input);
-  }
 
   lenv_del(e);
 
