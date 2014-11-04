@@ -702,6 +702,7 @@ lval* lval_eval_sexp(lenv *e, lval* v) {
     break;
   case LVAL_LAM:
     result = lval_call(e, f, v);
+    lval_del(f);
     return result;
     break;
   default:
