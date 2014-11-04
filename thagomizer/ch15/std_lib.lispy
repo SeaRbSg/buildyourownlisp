@@ -50,12 +50,34 @@
 (fun {trd l} { eval (head (tail (tail l))) })
 (fun {caddr l} { eval (head (tail (tail l))) })
 
-; List Length
-(fun {len l} {
-   if (== l nil)
-     {0}
-     {+ 1 (len (tail l))}
+; Apply Function to List
+(fun {map f l} {
+  if (== l nil)
+    { nil }
+    { join (list (f (fst l))) (map f (tail l)) }
 })
+
+; Apply Filter to List
+(fun {filter f l} {
+  if (== l nil)
+    { nil }
+    { join (if (f (fst l)) {head l} {nil}) (filter f (tail l)) }
+})
+
+; Fold left
+(fun {foldl f z l} {
+  if (== l nil)
+    { z }
+    { foldl f (f z (fst l)) (tail l)}
+})
+
+; List Length
+; (fun {len l} {
+;    if (== l nil)
+;      {0}
+;      {+ 1 (len (tail l))}
+; })
+(fun {len l} {foldl (\ {x y} {+ x 1}) 0 l})
 
 ; Nth item in List
 (fun {nth n l} {
@@ -85,34 +107,14 @@
 (fun {split n l} {list (take n l) (drop n l)})
 
 ; Element of List 
-(fun {elem x l} {
-  if (== l nil)
-    { false }
-    {if (== x (fst l)) 
-      { true }
-      { elem x (tail l) }}
-})
-
-; Apply Function to List
-(fun {map f l} {
-  if (== l nil)
-    { nil }
-    { join (list (f (fst l))) (map f (tail l)) }
-})
-
-; Apply Filter to List
-(fun {filter f l} {
-  if (== l nil)
-    { nil }
-    { join (if (f (fst l)) {head l} {nil}) (filter f (tail l)) }
-})
-
-; Fold left
-(fun {foldl f z l} {
-  if (== l nil)
-    { z }
-    { foldl f (f z (fst l)) (tail l)}
-})
+; (fun {elem x l} {
+;   if (== l nil)
+;     { false }
+;     {if (== x (fst l)) 
+;       { true }
+;       { elem x (tail l) }}
+; })
+(fun {elem x l} {foldl or false (map (\ {y} {== y x}) {1 2 3 4 5})})
 
 (fun {sum l} {foldl + 0 l})
 (fun {product l} {foldl * 1 l})
