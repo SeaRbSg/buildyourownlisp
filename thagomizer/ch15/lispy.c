@@ -732,9 +732,9 @@ lval* builtin_exit(lenv* e, lval* a) {
 
 lval* builtin_op(lenv* e, lval* a, char* op) {
   /* Ensure all arguments are numbers */
-  for (int i = 0; i < a->count; i++) {
-    LASSERT_TYPE(op, a, i, LVAL_NUM);
-  }
+  /* for (int i = 0; i < a->count; i++) { */
+  /*   LASSERT_TYPE(op, a, i, LVAL_NUM); */
+  /* } */
 
   /* Pop the first element */
   lval* x = lval_pop(a, 0);
