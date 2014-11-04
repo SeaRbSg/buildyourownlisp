@@ -769,6 +769,8 @@ BUILTIN(cons) {
   lval* x = lval_pop(a, 0);
   lval* s = lval_pop(a, 0);
 
+  lval_del(a);
+
   return lval_cons(x, s);
 }
 
@@ -801,6 +803,8 @@ BUILTIN(eq) {
   int r = lval_eq(m, n);
 
   lval_del(a);
+  lval_del(m);
+  lval_del(n);
 
   return lval_num(r);
 }
@@ -825,13 +829,17 @@ BUILTIN(exp) {
 BUILTIN(ge) {
   CHECK_ARITY(">=", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_NUM(L_CELL_N(a, 0)) >= L_NUM(L_CELL_N(a, 1)));
+  lval* r = lval_num(L_NUM(L_CELL_N(a, 0)) >= L_NUM(L_CELL_N(a, 1)));
+  lval_del(a);
+  return r;
 }
 
 BUILTIN(gt) {
   CHECK_ARITY(">", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_NUM(L_CELL_N(a, 0)) > L_NUM(L_CELL_N(a, 1)));
+  lval* r = lval_num(L_NUM(L_CELL_N(a, 0)) > L_NUM(L_CELL_N(a, 1)));
+  lval_del(a);
+  return r;
 }
 
 BUILTIN(head) {
@@ -864,10 +872,13 @@ BUILTIN(if) {
 
   if (L_NUM(c)) {
     r = lval_eval(e, t);
+    lval_del(f);
   } else {
     r = lval_eval(e, f);
+    lval_del(t);
   }
 
+  lval_del(c);
   lval_del(a);
 
   return r;
@@ -908,11 +919,15 @@ BUILTIN(lambda) {
 BUILTIN(le) {
   CHECK_ARITY("<=", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_NUM(L_CELL_N(a, 0)) <= L_NUM(L_CELL_N(a, 1)));
+  lval* r = lval_num(L_NUM(L_CELL_N(a, 0)) <= L_NUM(L_CELL_N(a, 1)));
+  lval_del(a);
+  return r;
 }
 
 BUILTIN(len) {
-  return lval_num(L_COUNT_N(a, 0));
+  lval* r = lval_num(L_COUNT_N(a, 0));
+  lval_del(a);
+  return r;
 }
 
 BUILTIN(list) {
@@ -957,7 +972,9 @@ BUILTIN(load) {
 BUILTIN(lt) {
   CHECK_ARITY("<", a, 2);
   CHECK_FOR_NUMBERS(a);
-  return lval_num(L_NUM(L_CELL_N(a, 0)) < L_NUM(L_CELL_N(a, 1)));
+  lval* r = lval_num(L_NUM(L_CELL_N(a, 0)) < L_NUM(L_CELL_N(a, 1)));
+  lval_del(a);
+  return r;
 }
 
 BUILTIN(max) {
@@ -993,6 +1010,8 @@ BUILTIN(ne) {
   int r = lval_eq(m, n);
 
   lval_del(a);
+  lval_del(m);
+  lval_del(n);
 
   return lval_num(!r);
 }
@@ -1212,7 +1231,8 @@ int main(int argc, char** argv) {
     free(input);
   }
 
-  free(env);
+  lenv_del(env);
+
   mpc_cleanup(8, Number, Symbol, String, Comment, Sexp, Qexp, Expr, Lispy);
 
   return 0;
