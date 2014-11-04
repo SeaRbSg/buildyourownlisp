@@ -1166,7 +1166,7 @@ int main(int argc, char** argv) {
 
   mpca_lang(MPCA_LANG_DEFAULT, "                                \
             number   : /-?[0-9]+(\\.[0-9]+)?/;                  \
-            symbol   : /[a-zA-Z0-9_+*\\/\\\\=<>!&-]+/;          \
+            symbol   : /[a-zA-Z0-9_+*\\/\\\\=<>!&^%-]+/;        \
             string   : /\"(\\\\.|[^\"])*\"/;                    \
             comment  : /;[^\\r\\n]*/;                           \
             sexp     : '(' <expr>* ')';                         \
