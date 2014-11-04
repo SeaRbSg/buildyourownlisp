@@ -89,6 +89,9 @@ lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
 lenv *lenv_copy(lenv *e);
 void lenv_def(lenv *e, lval *k, lval *v);
+lval *builtin_load(lenv *e, lval *a);
+lval *builtin_print(lenv *e, lval *a);
+lval *builtin_error(lenv *e, lval *a);
 lval *builtin_list(lenv *e, lval *a);
 lval *builtin_head(lenv *e, lval *a);
 lval *builtin_tail(lenv *e, lval *a);
@@ -125,6 +128,7 @@ lval *lval_eval(lenv *e, lval *v);
 lval *lval_read_num(mpc_ast_t *t);
 lval *lval_read_str(mpc_ast_t *t);
 lval *lval_read(mpc_ast_t *t);
+int main(int argc, char **argv);
 /* DONE */
 
 /** Actual Code **/
