@@ -13,6 +13,9 @@ tags: lispy.c
 lispy: prototypes.c lispy.c mpc.c
 	$(CC) $(CFLAGS) lispy.c mpc.c -o lispy
 
+hash_table_test: hash_table.c hash_table_test.c
+	$(CC) $(CFLAGS) hash_table.c hash_table_test.c -o hash_table_test
+
 run: lispy
 	./lispy
 
