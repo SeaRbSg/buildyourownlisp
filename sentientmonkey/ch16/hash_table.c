@@ -30,10 +30,12 @@ entry* entry_delete(entry* e) {
     return value;
 }
 
-hash_table* hash_table_new(unsigned long size) {
+hash_table* hash_table_new() {
+    unsigned long size = DEFAULT_HASH_SIZE;
     hash_table* h = malloc(sizeof(hash_table));
     h->entries = malloc(sizeof(entry)*size);
     h->size = size;
+    h->capacity = 0;
     for(unsigned int i=0; i < size; i++) {
         h->entries[i] = NULL;
     }
@@ -61,6 +63,7 @@ void* hash_table_add(hash_table* h, char* key, void* value) {
     entry* previous = NULL;
     if (parent == NULL) {
         h->entries[bucket] = e;
+        h->capacity += 1;
     }
     while (parent != NULL) {
         if (strcmp(parent->key, key) == 0) {
@@ -74,11 +77,18 @@ void* hash_table_add(hash_table* h, char* key, void* value) {
             break;
         }
         if (parent->next == NULL) {
+            h->capacity += 1;
             parent->next = e;
             parent = e;
         }
         previous = parent;
         parent = parent->next;
+    }
+
+    // if exceeds the load capacity, double in size
+    double load = (h->capacity / h->size);
+    if (load > DEFAULT_LOAD_FACTOR) {
+        hash_table_resize(h, h->size*2);
     }
     return r;
 }
@@ -92,6 +102,7 @@ void* hash_table_remove(hash_table* h, char* key) {
     entry* previous = NULL;
     while (e != NULL) {
         if (strcmp(key, e->key) == 0) {
+            h->capacity -= 1;
             entry* next = e->next;
             r = entry_delete(e);
             if (previous == NULL) {

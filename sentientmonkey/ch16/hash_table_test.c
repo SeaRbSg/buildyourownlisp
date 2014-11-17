@@ -1,5 +1,7 @@
 #include "hash_table.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 int main() {
     int a = 1;
@@ -22,7 +24,13 @@ int main() {
     r = hash_table_remove(h, "foo");
     hash_table_print(h);
     printf("r is %i\n", *r);
-    hash_table_resize(h, 20);
+    char buff[3];
+    int ints[20];
+    for(int i=0; i < 20; i++) {
+        ints[i] = i;
+        sprintf(buff, "%i", i);
+        hash_table_add(h, buff, &(ints[i]));
+    }
     hash_table_print(h);
     hash_table_delete(h);
     return 0;
