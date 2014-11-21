@@ -5,6 +5,7 @@
 
 #include <editline/readline.h>
 #include "mpc.h"
+#include "hash_table.h"
 
 #define ERR_BUF_SIZE 512
 

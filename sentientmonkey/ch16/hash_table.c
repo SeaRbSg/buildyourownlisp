@@ -36,10 +36,24 @@ hash_table* hash_table_new() {
     h->entries = malloc(sizeof(entry)*size);
     h->size = size;
     h->capacity = 0;
+    h->print_func = NULL;
+    h->copy_func = NULL;
+    h->delete_func = NULL;
     for(unsigned int i=0; i < size; i++) {
         h->entries[i] = NULL;
     }
     return h;
+}
+void hash_table_register_print(hash_table* h, print_func print_func) {
+    h->print_func = print_func;
+}
+
+void hash_table_register_copy(hash_table* h, copy_func copy_func) {
+    h->copy_func = copy_func;
+}
+
+void hash_table_register_delete(hash_table* h, delete_func delete_func) {
+    h->delete_func = delete_func;
 }
 
 void* hash_table_get(hash_table* h, char* key) {
@@ -56,7 +70,11 @@ void* hash_table_get(hash_table* h, char* key) {
 
 void* hash_table_add(hash_table* h, char* key, void* value) {
     unsigned long bucket = hash(key) % h->size;
-    entry* e = entry_new(key, value);
+    void* new_value = value;
+    if (h->copy_func != NULL) {
+        new_value = h->copy_func(value);
+    }
+    entry* e = entry_new(key, new_value);
     void* r = NULL;
 
     entry* parent = h->entries[bucket];
@@ -90,6 +108,10 @@ void* hash_table_add(hash_table* h, char* key, void* value) {
     if (load > DEFAULT_LOAD_FACTOR) {
         hash_table_resize(h, h->size*2);
     }
+    if (r != NULL && h->delete_func != NULL) {
+        h->delete_func(r);
+        r = NULL;
+    }
     return r;
 }
 
@@ -115,6 +137,10 @@ void* hash_table_remove(hash_table* h, char* key) {
             e = e->next;
         }
     }
+    if (r != NULL && h->delete_func != NULL) {
+        h->delete_func(r);
+        r = NULL;
+    }
     return r;
 }
 
@@ -130,7 +156,12 @@ void hash_table_print(hash_table* h) {
             if (last != NULL) {
                 printf(", ");
             }
-            printf("%s: %p", e->key, e->value);
+            printf("%s: ", e->key);
+            if (h->print_func != NULL) {
+                h->print_func(e->value);
+            } else {
+                printf("%p", e->value);
+            }
             last = e;
             e = e->next;
         }
@@ -141,11 +172,16 @@ void hash_table_print(hash_table* h) {
 void hash_table_delete(hash_table* h) {
     entry* e = NULL;
     entry* next = NULL;
+    void* r = NULL;
     for (unsigned long i=0; i < h->size; i++) {
         e = h->entries[i];
         while (e != NULL) {
             next = e->next;
-            entry_delete(e);
+            r = entry_delete(e);
+            if (r != NULL && h->delete_func != NULL) {
+                h->delete_func(r);
+                r = NULL;
+            }
             e = next;
         }
     }
