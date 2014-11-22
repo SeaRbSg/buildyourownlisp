@@ -4,7 +4,14 @@ all: \
 	run \
 	$(NULL)
 
-conditionals: conditionals.c mpc.c
+prototypes.c: conditionals.c
+	cproto -o prototypes.c conditionals.c > /dev/null 2>&1
+
+tags: conditionals.c
+	ctags conditionals.c
+
+conditionals: prototypes.c conditionals.c mpc.c
+	$(CC) $(CFLAGS) conditionals.c mpc.c -o conditionals
 
 run: conditionals
 	./conditionals
@@ -17,3 +24,4 @@ bonus: conditionals
 
 clean:
 	rm -Rf conditionals
+	rm -Rf prototypes.c

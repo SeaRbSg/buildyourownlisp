@@ -1,0 +1,74 @@
+; Basic test functions
+(fun {assert-eq a b} {
+  (if (== a b)
+    {display "."}
+    {do (display "\n")
+        (display s)
+        (display "Failed: Got ")
+        (display a)
+        (display ", expected ")
+        (display b)
+        (display "\n")})})
+
+(fun {skip x} {
+  (display "S") })
+
+; builtin concat
+(assert-eq (concat "1" "2" "3") "123")
+(assert-eq (concat "1" "2") "12")
+(assert-eq (concat "1") "1")
+
+; Primitives!
+(assert-eq nil {})
+(assert-eq true 1)
+(assert-eq false 0)
+
+; Logic!
+(assert-eq (not true) false)
+(assert-eq (or true false) true)
+(assert-eq (or false true) true)
+(assert-eq (and true false) false)
+(assert-eq (and false true) false)
+(assert-eq (and true true) true)
+
+; Lists!
+(assert-eq (fst {1 2 3}) 1)
+(assert-eq (snd {1 2 3}) 2)
+(assert-eq (trd {1 2 3}) 3)
+
+(assert-eq (len {1 2 3}) 3)
+(assert-eq (nth 2 {1 2 3}) 3)
+(assert-eq (last {1 2 3 4}) 4)
+
+; curry / do!
+(assert-eq (eval {curry + {5 6 7}}) 18)
+(assert-eq (eval {let {do (= {x} 100) (x) } }) 100)
+
+; Lists++
+(assert-eq (take 2 {1 2 3}) {1 2})
+(assert-eq (drop 2 {1 2 3}) {3})
+
+(assert-eq (split 2 {1 2 3 4}) {{1 2} {3 4}})
+(assert-eq (elem 2 {1 2 3}) true)
+(assert-eq (elem 7 {1 2 3}) false)
+
+; Map
+(assert-eq (map - {5 6 7 8 2 22 44}) {-5 -6 -7 -8 -2 -22 -44})
+(assert-eq (map (\ {x} {+ x 10}) {5 2 11}) {15 12 21})
+
+; Filter
+(assert-eq (filter (\ {x} {> x 2}) {5 2 11 -7 8 1}) {5 11 8})
+
+; sum
+(assert-eq (sum {1 2 3}) 6)
+(assert-eq (product {1 2 3 4}) 24)
+
+(assert-eq (month-day-suffix 0) "st")
+(assert-eq (month-day-suffix 1) "nd")
+(assert-eq (month-day-suffix 3) "rd")
+(assert-eq (month-day-suffix 4) "th")
+
+(assert-eq (day-name 0) "Monday")
+(assert-eq (day-name 6) "Sunday")
+
+(assert-eq (fib 10) 55)

@@ -1,0 +1,9 @@
+load "std_lib.lispy"
+
+(fun {cc amount coins} {
+  select 
+    {(== coins nil) 0}
+    {(< amount (car coins)) (cc amount (tail coins))}
+    {(== amount (car coins)) (+ 1 (cc amount (tail coins)))}
+    {otherwise (+ (cc amount (tail coins)) (cc (- amount (car coins)) coins))}
+})
